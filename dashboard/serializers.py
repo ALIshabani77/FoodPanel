@@ -1,5 +1,12 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
+from .models import Employee
+
+class EmployeeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Employee
+        fields = ['id', 'first_name', 'last_name', 'created_at']
+
 User = get_user_model()
 
 class SimpleLoginSerializer(serializers.Serializer):
@@ -15,3 +22,5 @@ class SimpleLoginSerializer(serializers.Serializer):
             defaults={'first_name': first_name, 'last_name': last_name}
         )
         return user
+
+

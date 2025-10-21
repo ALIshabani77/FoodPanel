@@ -2,5 +2,5 @@ from django.urls import path
 from .views import SimpleLoginView
 
 urlpatterns = [
-    path('auth/simple-login/', SimpleLoginView.as_view(), name='simple-login'),
+    path('simple-login/', SimpleLoginView.as_view(), name='simple-login'),
 ]
