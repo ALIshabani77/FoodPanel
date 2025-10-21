@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="fa">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>منوی غذا | داشبورد غذا</title>
+
+<!-- فونت و Tailwind -->
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+tailwind.config = {
+  darkMode: "class",
+  theme: {
+    extend: {
+      colors: {
+        "primary": "#8B5F42",
+        "background-light": "#FDF8F0",
+        "background-dark": "#3B2B20",
+        "card-light": "#FFFFFF",
+        "card-dark": "#2C1F1A",
+        "text-light": "#3B2B20",
+        "text-dark": "#FDF8F0",
+        "subtle-light": "#EFEAE4",
+        "subtle-dark": "#4A3A32",
+      },
+      fontFamily: { "display": ["Vazirmatn", "sans-serif"] },
+      boxShadow: { 'lg': '0 10px 15px -3px rgba(0, 0, 0, 0.07)' },
+    },
+  },
+}
+</script>
+
+<!-- Day.js و Jalali -->
+<script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jalaliday@1.4.0/dayjs-jalali.min.js"></script>
+
+<style>
+  body {
+    background: linear-gradient(170deg, #FDF8F0 0%, #F5E9D9 100%);
+    font-family: 'Vazirmatn', sans-serif;
+  }
+  .day {
+    transition: all 0.3s ease;
+  }
+  .day:hover {
+    transform: scale(1.03);
+  }
+</style>
+</head>
+
+<body class="font-display text-text-light rtl">
+
+<!-- 🟤 Header -->
+<header class="bg-primary text-white py-4 shadow-md">
+  <div class="container mx-auto flex justify-between items-center px-6">
+    <h1 class="text-2xl font-bold">🍱 داشبورد غذا</h1>
+    <nav class="space-x-4 space-x-reverse">
+      <a href="/menu.html" class="hover:underline font-medium">منو</a>
+      <a href="/summary.html" class="hover:underline">خلاصه سفارش</a>
+      <a href="/feedback.html" class="hover:underline">بازخورد</a>
+      <a href="/profile.html" class="hover:underline">پروفایل</a>
+    </nav>
+  </div>
+</header>
+
+<!-- 🟤 Main -->
+<main class="container mx-auto py-10 px-6">
+  <div class="text-center mb-8">
+    <h2 class="text-3xl font-bold text-primary mb-2">منوی غذایی ماه جاری</h2>
+    <p class="text-placeholder-light">روز مورد نظر خود را انتخاب و غذای دلخواه را رزرو کنید</p>
+  </div>
+
+  <div id="calendar" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-7 gap-4"></div>
+</main>
+
+<!-- 🟤 Script -->
+<script>
+dayjs.extend(window.jalaliday);
+const calendarEl = document.getElementById('calendar');
+const today = dayjs().calendar('jalali');
+let currentMonth = today.month();
+let currentYear = today.year();
+const foods = ["قرمه سبزی", "جوجه کباب", "عدس پلو", "قیمه", "کتلت", "کباب کوبیده", "کشک بادمجان"];
+let savedMeals = JSON.parse(localStorage.getItem('reservedMeals') || '{}');
+
+function renderCalendar() {
+  calendarEl.innerHTML = '';
+  const startOfMonth = dayjs().calendar('jalali').year(currentYear).month(currentMonth).startOf('month');
+  const daysInMonth = dayjs().calendar('jalali').year(currentYear).month(currentMonth).daysInMonth();
+  const weekDays = ['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج'];
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const date = startOfMonth.date(day);
+    const dateKey = date.format('YYYY-MM-DD');
+    const isToday = date.isSame(today, 'day');
+    const reservedFood = savedMeals[dateKey];
+    const dayDiv = document.createElement('div');
+    dayDiv.className = `day bg-card-light rounded-xl shadow-lg p-4 text-center border hover:border-primary cursor-pointer`;
+    if (isToday) dayDiv.classList.add('bg-primary', 'text-white', 'font-bold');
+    if (reservedFood) dayDiv.classList.add('border-2', 'border-primary');
+
+    // غیر فعال کردن روزهای گذشته
+    const diff = date.startOf('day').diff(today.startOf('day'), 'day');
+    if (diff < 0) {
+      dayDiv.classList.add('opacity-50', 'cursor-not-allowed');
+      dayDiv.style.pointerEvents = 'none';
+    }
+
+    dayDiv.innerHTML = `
+      <div class="font-semibold">${weekDays[date.day()]}</div>
+      <div class="text-lg">${day}</div>
+      ${reservedFood ? `<div class="mt-2 text-sm">🍛 ${reservedFood}</div>` : ''}
+    `;
+
+    dayDiv.addEventListener('click', () => showFoodOptions(dateKey, dayDiv));
+    calendarEl.appendChild(dayDiv);
+  }
+}
+
+function showFoodOptions(dateKey, container) {
+  if (savedMeals[dateKey]) return;
+
+  const box = document.createElement('div');
+  box.className = "mt-3 space-y-2";
+  foods.forEach(food => {
+    const btn = document.createElement('button');
+    btn.textContent = food;
+    btn.className = "block w-full py-2 bg-primary text-white rounded-lg hover:bg-opacity-90 transition";
+    btn.onclick = () => reserveMeal(dateKey, food);
+    box.appendChild(btn);
+  });
+  container.appendChild(box);
+}
+
+function reserveMeal(dateKey, food) {
+  savedMeals[dateKey] = food;
+  localStorage.setItem('reservedMeals', JSON.stringify(savedMeals));
+  renderCalendar();
+}
+
+renderCalendar();
+</script>
+
+<footer class="text-center py-6 text-sm text-placeholder-light">
+  © 2025 شرکت نو آفرین. همه حقوق محفوظ است.
+</footer>
+
+</body>
+</html>
