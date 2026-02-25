@@ -1,705 +1,985 @@
-
 // import React, { useState, useEffect } from "react";
-
 // import moment from "moment-jalaali";
-
 // import { motion, AnimatePresence } from "framer-motion";
-
-// import axios from "axios";
-
 // import "@fontsource/vazir";
 
-
-
+// import api from "../api";
 // import Navbar from "../components/Navbar";
-
 // import Toast from "../components/Toast";
-
-
 
 // moment.loadPersian({ dialect: "persian-modern" });
 
-
-
-// const API_BASE = process.env.REACT_APP_API_BASE;
-
-
-
 // export default function MenuPage() {
-
 //   const today = moment();
 
 //   const [currentMonth, setCurrentMonth] = useState(moment());
-
 //   const [selectedDate, setSelectedDate] = useState(
-
 //     today.format("jYYYY-jMM-jDD")
-
 //   );
-
-
 
 //   const [menus, setMenus] = useState([]);
-
 //   const [foodsForDay, setFoodsForDay] = useState([]);
-
 //   const [menuId, setMenuId] = useState(null);
 
-
-
 //   const [selectedDays, setSelectedDays] = useState([]);
-
-//   const [limitMessage, setLimitMessage] = useState("");
-
-
+//   const [monthStatus, setMonthStatus] = useState({});
+//   const [foodRatings, setFoodRatings] = useState({});
 
 //   const [showToast, setShowToast] = useState(false);
-
 //   const [toastMessage, setToastMessage] = useState("");
-
 //   const [toastType, setToastType] = useState("success");
 
-
-
 //   const showNotification = (message, type = "success") => {
-
 //     setToastMessage(message);
-
 //     setToastType(type);
-
 //     setShowToast(true);
-
 //     setTimeout(() => setShowToast(false), 2500);
-
 //   };
 
-
-
-//   // ------------------ دریافت منو ------------------
-
 //   useEffect(() => {
-
-//     const fetchMenus = async () => {
-
-//       try {
-
-//         const res = await axios.get(`${API_BASE}/menu/`);
-
-//         setMenus(res.data);
-
-//       } catch (err) {
-
-//         showNotification("❌ خطا در دریافت منو", "error");
-
-//       }
-
-//     };
-
-//     fetchMenus();
-
+//     api
+//       .get("menu/")
+//       .then((res) => setMenus(res.data))
+//       .catch(() => showNotification("❌ خطا در دریافت منو", "error"));
 //   }, []);
 
-
-
-//   // ------------------ دریافت انتخاب‌های قبلی ------------------
-
 //   useEffect(() => {
-
-//     const fetchSelections = async () => {
-
-//       const token = localStorage.getItem("access");
-
-//       if (!token) return;
-
-
-
-//       try {
-
-//         const res = await axios.get(`${API_BASE}/user-selections/`, {
-
-//           headers: { Authorization: `Bearer ${token}` },
-
+//     api
+//       .get("food-ratings/")
+//       .then((res) => {
+//         const ratingMap = {};
+//         res.data.forEach((item) => {
+//           ratingMap[item.food__id] = {
+//             avg: item.avg_rating,
+//             count: item.total_votes,
+//           };
 //         });
-
-
-
-//         const dated = res.data.map((sel) =>
-
-//           moment(sel.menu.date, "YYYY-MM-DD").format("jYYYY-jMM-jDD")
-
-//         );
-
-
-
-//         setSelectedDays(dated);
-
-//       } catch (err) {
-
-//         showNotification("❌ خطا در دریافت انتخاب‌ها", "error");
-
-//       }
-
-//     };
-
-
-
-//     fetchSelections();
-
+//         setFoodRatings(ratingMap);
+//       })
+//       .catch(() => {});
 //   }, []);
 
-
-
-//   // ------------------ تنظیم غذاها ------------------
+//   useEffect(() => {
+//     api.get("user-selections/").then((res) => {
+//       const dated = res.data.map((sel) =>
+//         moment(sel.menu.date, "YYYY-MM-DD").format("jYYYY-jMM-jDD")
+//       );
+//       setSelectedDays(dated);
+//     });
+//   }, []);
 
 //   useEffect(() => {
+//     const year = currentMonth.jYear();
+//     const month = currentMonth.jMonth() + 1;
 
+//     api
+//       .get(`menu/month-status/?year=${year}&month=${month}`)
+//       .then((res) => setMonthStatus(res.data.days || {}))
+//       .catch(() => setMonthStatus({}));
+//   }, [currentMonth]);
+
+//   useEffect(() => {
+//     if (!monthStatus || !selectedDate) return;
+
+//     const currentInfo = monthStatus[selectedDate];
+//     if (!currentInfo || currentInfo.enabled !== false) return;
+
+//     const daysInMonth = moment.jDaysInMonth(
+//       currentMonth.jYear(),
+//       currentMonth.jMonth()
+//     );
+
+//     for (
+//       let i = moment(selectedDate, "jYYYY-jMM-jDD").jDate() + 1;
+//       i <= daysInMonth;
+//       i++
+//     ) {
+//       const nextDay = currentMonth
+//         .clone()
+//         .startOf("jMonth")
+//         .add(i - 1, "day")
+//         .format("jYYYY-jMM-jDD");
+
+//       if (monthStatus[nextDay]?.enabled === true) {
+//         setSelectedDate(nextDay);
+//         break;
+//       }
+//     }
+//   }, [selectedDate, monthStatus, currentMonth]);
+
+//   useEffect(() => {
 //     const converted = menus.map((m) => ({
-
 //       ...m,
-
 //       jDate: moment(m.date, "YYYY-MM-DD").format("jYYYY-jMM-jDD"),
-
 //     }));
 
-
-
 //     const menu = converted.find((m) => m.jDate === selectedDate);
-
 //     setFoodsForDay(menu ? menu.foods : []);
-
 //     setMenuId(menu ? menu.id : null);
-
 //   }, [selectedDate, menus]);
 
-
-
-//   // ------------------ محدودیت ۲۴ ساعت ------------------
-
-//   const checkLimit = (gregorianDate) => {
-
-//     const now = moment();
-
-//     const target = moment(gregorianDate, "YYYY-MM-DD");
-
-//     const hoursDiff = target.diff(now, "hours");
-
-
-
-//     if (hoursDiff <= 0) {
-
-//       return { allowed: false, msg: "⛔ این روز گذشته است." };
-
-//     }
-
-
-
-//     if (hoursDiff < 24) {
-
-//       return { allowed: false, msg: "⛔ مهلت انتخاب برای این روز تمام شده است." };
-
-//     }
-
-
-
-//     return { allowed: true, msg: "" };
-
-//   };
-
-
-
-//   // ------------------ ثبت غذا (با قابلیت پرش به روز بعد) ------------------
-
 //   const saveSelection = async (menuId, foodId, foodName) => {
-
-//     if (limitMessage) {
-
-//         showNotification(limitMessage, "error");
-
-//         return;
-
-//     }
-
-
-
-//     const token = localStorage.getItem("access");
-
-//     if (!token) {
-
-//       showNotification("ابتدا باید وارد شوید.", "error");
-
-//       return;
-
-//     }
-
-
-
 //     try {
-
-//       const res = await axios.post(
-
-//         `${API_BASE}/menu/select/`,
-
-//         { menu: menuId, food: foodId },
-
-//         {
-
-//           headers: {
-
-//             Authorization: `Bearer ${token}`,
-
-//             "Content-Type": "application/json",
-
-//           },
-
-//         }
-
-//       );
-
-
+//       const res = await api.post("menu/select/", {
+//         menu: menuId,
+//         food: foodId,
+//       });
 
 //       if (res.status === 200) {
-
-//         showNotification(`🍽 ${foodName} با موفقیت ثبت شد`, "success");
-
-        
-
-//         // 1. آپدیت کردن تیک سبز برای روز جاری
+//         showNotification(`🍽 ${foodName} با موفقیت ثبت شد`);
 
 //         if (!selectedDays.includes(selectedDate)) {
-
 //           setSelectedDays((prev) => [...prev, selectedDate]);
-
 //         }
 
-
-
-//         // 🚀 منطق پرش خودکار
-
-//         const currentMoment = moment(selectedDate, "jYYYY-jMM-jDD");
-
-//         const nextDay = currentMoment.add(1, "day"); // یک روز اضافه کن
-
-//         const nextDayStr = nextDay.format("jYYYY-jMM-jDD");
-
-
-
-//         // اگر روز بعدی در ماه دیگری است، تقویم را ورق بزن
-
+//         const nextDay = moment(selectedDate, "jYYYY-jMM-jDD").add(1, "day");
 //         if (nextDay.jMonth() !== currentMonth.jMonth()) {
-
-//             setCurrentMonth(nextDay);
-
+//           setCurrentMonth(nextDay);
 //         }
-
-
-
-//         // انتخاب روز جدید
-
-//         setSelectedDate(nextDayStr);
-
+//         setSelectedDate(nextDay.format("jYYYY-jMM-jDD"));
 //       }
-
 //     } catch {
-
 //       showNotification("❌ خطا در ثبت انتخاب", "error");
-
 //     }
-
 //   };
 
-
-
-//   // ------------------ تقویم ------------------
-
-//   const goToPrevMonth = () =>
-
-//     setCurrentMonth(currentMonth.clone().subtract(1, "jMonth"));
-
-
-
-//   const goToNextMonth = () =>
-
-//     setCurrentMonth(currentMonth.clone().add(1, "jMonth"));
-
-
-
 //   const daysInMonth = moment.jDaysInMonth(
-
 //     currentMonth.jYear(),
-
 //     currentMonth.jMonth()
-
 //   );
-
-
 
 //   let firstDay = currentMonth.clone().startOf("jMonth").day();
-
 //   firstDay = (firstDay + 1) % 7;
 
-
-
 //   const blanks = Array(firstDay).fill(null);
-
 //   const days = Array.from({ length: daysInMonth }, (_, i) =>
-
 //     currentMonth.clone().startOf("jMonth").add(i, "days")
-
 //   );
-
-
 
 //   return (
-
-//     <div
-
-//       dir="rtl"
-
-//       className="min-h-screen bg-[#f8f5f2] font-[Vazir] flex flex-col items-center relative"
-
-//     >
-
+//     <div dir="rtl" className="min-h-screen bg-[#f8f5f2] font-[Vazir]">
 //       <Navbar active="menu" />
-
-
-
 //       <Toast show={showToast} message={toastMessage} type={toastType} />
 
-
-
-//       {/* ------------------ تقویم ------------------ */}
-
-//       <section className="w-full max-w-6xl mt-28 flex flex-col md:flex-row justify-between items-start gap-10 px-6 sm:px-10">
-
-//         <motion.div
-
-//           layout
-
-//           className="flex-1 bg-white rounded-2xl shadow-md p-6 sm:p-8"
-
-//         >
-
-//           <div className="flex justify-between items-center mb-5">
-
-//             <button
-
-//               onClick={goToPrevMonth}
-
-//               className="text-gray-500 hover:text-[#c97b39]"
-
-//             >
-
-//               ❮
-
-//             </button>
-
-
-
-//             <h3 className="font-semibold text-[#503a2f] text-lg">
-
-//               {currentMonth.format("jMMMM jYYYY")}
-
-//             </h3>
-
-
-
-//             <button
-
-//               onClick={goToNextMonth}
-
-//               className="text-gray-500 hover:text-[#c97b39]"
-
-//             >
-
-//               ❯
-
-//             </button>
-
-//           </div>
-
-
-
-//           <div className="grid grid-cols-7 gap-1 text-center text-sm text-gray-600 mb-2">
-
-//             {["ش", "ی", "د", "س", "چ", "پ", "ج"].map((d) => (
-
-//               <div key={d} className="font-semibold">
-
-//                 {d}
-
-//               </div>
-
-//             ))}
-
-//           </div>
-
-
-
-//           <div className="grid grid-cols-7 gap-1 text-center text-sm">
-
-//             {blanks.map((_, i) => (
-
-//               <div key={i}></div>
-
-//             ))}
-
-
-
-//             {days.map((day) => {
-
-//               const dateStr = day.format("jYYYY-jMM-jDD");
-
-//               const gregorian = day.format("YYYY-MM-DD");
-
-
-
-//               const limit = checkLimit(gregorian);
-
-
-
-//               const isToday = day.isSame(moment(), "day");
-
-//               const isSelected = dateStr === selectedDate;
-
-//               const isChosen = selectedDays.includes(dateStr);
-
-
-
-//               const disabled = !limit.allowed;
-
-
-
-//               return (
-
-//                 <motion.button
-
-//                   key={dateStr}
-
-//                   disabled={disabled}
-
-//                   whileHover={disabled ? {} : { scale: 1.08 }}
-
-//                   whileTap={disabled ? {} : { scale: 0.95 }}
-
-//                   onClick={() => {
-
-//                     if (disabled) {
-
-//                       showNotification(limit.msg, "error");
-
-//                       return;
-
-//                     }
-
-//                     setLimitMessage("");
-
-//                     setSelectedDate(dateStr);
-
-//                   }}
-
-//                   className={`relative py-2 sm:py-3 rounded-full transition-all font-medium
-
-//                     ${
-
-//                       disabled
-
-//                         ? "bg-gray-200 text-gray-400 cursor-not-allowed opacity-60"
-
-//                         : isSelected
-
-//                         ? "bg-[#c97b39] text-white"
-
-//                         : isChosen
-
-//                         ? "bg-green-100 text-green-700 border border-green-400"
-
-//                         : isToday
-
-//                         ? "bg-[#f5e6d8] text-[#503a2f]"
-
-//                         : "text-gray-700 hover:bg-[#f0e6dd]"
-
+//       <main className="pt-24 max-w-6xl mx-auto px-4">
+//         <section className="grid grid-cols-1 md:grid-cols-2 gap-8">
+//           {/* تقویم */}
+//           <motion.div className="bg-white rounded-xl shadow-sm p-4 border border-gray-50">
+//             <div className="flex justify-between mb-4">
+//               <button onClick={() => setCurrentMonth(currentMonth.clone().subtract(1, "jMonth"))}>❮</button>
+//               <h3 className="font-semibold">{currentMonth.format("jMMMM jYYYY")}</h3>
+//               <button onClick={() => setCurrentMonth(currentMonth.clone().add(1, "jMonth"))}>❯</button>
+//             </div>
+//             <div className="grid grid-cols-7 text-center text-xs mb-2">
+//               {["ش", "ی", "د", "س", "چ", "پ", "ج"].map((d) => (<div key={d}>{d}</div>))}
+//             </div>
+//             <div className="grid grid-cols-7 gap-1 text-center text-sm">
+//               {blanks.map((_, i) => (<div key={i} />))}
+//               {days.map((day) => {
+//                 const dateStr = day.format("jYYYY-jMM-jDD");
+//                 const dayNumber = day.jDate();
+//                 const info = monthStatus[dateStr];
+//                 const isDisabled = info && info.enabled === false;
+//                 const isSelected = dateStr === selectedDate;
+//                 const isChosen = selectedDays.includes(dateStr);
+//                 return (
+//                   <button
+//                     key={dateStr}
+//                     disabled={isDisabled}
+//                     onClick={() => isDisabled ? showNotification(info?.reason || "⛔ غیرفعال", "error") : setSelectedDate(dateStr)}
+//                     className={`relative py-2 rounded-full font-medium ${
+//                         isDisabled ? info?.reason === "تعطیل" ? "bg-red-100 text-red-600" : "bg-gray-200 text-gray-500"
+//                         : isSelected ? "bg-[#c97b39] text-white"
+//                         : isChosen ? "bg-green-100 text-green-700" : "hover:bg-[#f0e6dd]"
 //                     }`}
-
-//                 >
-
-//                   {day.format("jD")}
-
-
-
-//                   {!disabled && isChosen && (
-
-//                     <span className="absolute top-1 right-2 text-green-600 text-lg">
-
-//                       ✔
-
-//                     </span>
-
-//                   )}
-
-//                 </motion.button>
-
-//               );
-
-//             })}
-
-//           </div>
-
-//         </motion.div>
-
-
-
-//         {/* متن سمت راست */}
-
-//         <motion.div
-
-//           layout
-
-//           className="flex-1 bg-white rounded-2xl shadow-md p-6 sm:p-8 text-center md:text-right"
-
-//         >
-
-//           <h2 className="text-xl sm:text-2xl font-bold text-[#503a2f] mb-4">
-
-//             وعده‌های غذایی خود را برای این ماه انتخاب کنید
-
-//           </h2>
-
-//           <p className="text-[#7c6656] text-sm sm:text-base">
-
-//             با انتخاب دکمه زیر هر غذا، به صورت خودکار به روز بعد هدایت می‌شوید.
-
-//           </p>
-
-//         </motion.div>
-
-//       </section>
-
-
-
-//       {/* ------------------ لیست غذا ------------------ */}
-
-//       <section className="w-full max-w-6xl bg-white shadow-md rounded-2xl mt-8 p-6 sm:p-8 mb-10">
-
-//         <AnimatePresence mode="wait">
-
-//           <motion.div
-
-//             key={selectedDate}
-
-//             initial={{ opacity: 0, y: 20 }}
-
-//             animate={{ opacity: 1, y: 0 }}
-
-//             exit={{ opacity: 0, y: -10 }}
-
-//             transition={{ duration: 0.3 }}
-
-//             className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
-
-//           >
-
-//             {foodsForDay.length ? (
-
-//               foodsForDay.map((food) => (
-
-//                 <motion.div
-
-//                   key={food.id}
-
-//                   whileHover={{ scale: 1.02 }}
-
-//                   className="bg-white rounded-2xl border border-[#f1e8e0] overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col"
-
-//                 >
-
-//                   <img
-
-//                     src={
-
-//                       food.photo
-
-//                         ? food.photo
-
-//                         : "https://via.placeholder.com/300x200?text=No+Image"
-
-//                     }
-
-//                     alt={food.name}
-
-//                     className="h-44 w-full object-cover"
-
-//                   />
-
-
-
-//                   <div className="p-4 flex flex-col flex-grow">
-
-//                     <h4 className="text-lg font-semibold text-[#503a2f]">
-
-//                       {food.name}
-
-//                     </h4>
-
-//                     <p className="text-sm text-[#7c6656] mt-1 mb-4 flex-grow">
-
-//                       {food.description || "بدون توضیحات"}
-
-//                     </p>
-
-                    
-
-//                     {/* دکمه انتخاب */}
-
-//                     <button
-
-//                         onClick={() => saveSelection(menuId, food.id, food.name)}
-
-//                         disabled={!!limitMessage}
-
-//                         className={`w-full py-2 rounded-xl font-bold text-white transition-all
-
-//                             ${limitMessage 
-
-//                                 ? "bg-gray-400 cursor-not-allowed" 
-
-//                                 : "bg-[#c97b39] hover:bg-[#b76c2d]"
-
-//                             }`}
-
-//                     >
-
-//                         انتخاب 🍛
-
-//                     </button>
-
-//                   </div>
-
-//                 </motion.div>
-
-//               ))
-
-//             ) : (
-
-//               <p className="col-span-full text-center text-gray-500">
-
-//                 برای این روز هنوز منویی ثبت نشده 🍽️
-
-//               </p>
-
-//             )}
-
+//                   >
+//                     {dayNumber}
+//                   </button>
+//                 );
+//               })}
+//             </div>
 //           </motion.div>
 
-//         </AnimatePresence>
-
-//       </section>
-
+//           {/* راهنمای وضعیت */}
+//          <div className="bg-white rrounded-xl shadow-sm p-4 border border-gray-50 flex flex-col justify-center">
+//     <div>
+//       <h3 className="text-lg font-bold mb-6 text-[#503a2f] border-b border-[#f0e6dd] pb-3 flex items-center gap-2">
+//         راهنمای تقویم و وضعیت‌ها 🗓️
+//       </h3>
+//       <ul className="grid grid-cols-2 gap-2">
+//         <li className="flex items-center gap-3">
+//           <span className="w-3.5 h-3.5 rounded-full bg-[#22c55e] shadow-sm" />
+//           <span className="text-[#6F6259]">روزهای دارای رزرو قطعی ناهار</span>
+//         </li>
+//         <li className="flex items-center gap-3">
+//           <span className="w-3.5 h-3.5 rounded-full bg-[#c97b39] shadow-sm" />
+//           <span className="text-[#6F6259]">روز انتخاب شده (مشاهده منو)</span>
+//         </li>
+//         <li className="flex items-center gap-3">
+//           <span className="w-3.5 h-3.5 rounded-full bg-[#94a3b8] shadow-sm" />
+//           <span className="text-[#6F6259]">روزهای فاقد منو یا غیرقابل انتخاب</span>
+//         </li>
+//         <li className="flex items-center gap-3">
+//           <span className="w-3.5 h-3.5 rounded-full bg-[#ef4444] shadow-sm" />
+//           <span className="text-[#6F6259]">روزهای تعطیل یا غیرفعال شده</span>
+//         </li>
+//       </ul>
 //     </div>
 
+//     {/* باکس خلاصه فعالیت (پر کردن فضای خالی پایین کارت) */}
+//     <div className="mt-8 pt-6 border-t border-dashed border-[#e0d7cc]">
+//       <div className="bg-[#fdf8f4] p-5 rounded-xl border border-[#f5e6d8]">
+//         <p className="text-xs text-[#8b735a] leading-7">
+//           <strong className="block mb-2 text-[#c97b39] text-sm">خلاصه فعالیت شما:</strong>
+//           شما در ماه <span className="font-bold text-[#503a2f]">{currentMonth.format("jMMMM")}</span>، تا این لحظه برای <span className="font-bold text-[#d46211]">{selectedDays.filter(d => d.startsWith(currentMonth.format("jYYYY-jMM"))).length} روز</span> رزرو ناهار ثبت کرده‌اید.
+//         </p>
+//       </div>
+//       <p className="text-[10px] text-gray-400 mt-4 text-center italic">
+//         شرکت ریل‌پرداز نوآفرین - واحد رفاهی و تدارکات
+//       </p>
+//     </div>
+//   </div>
+//         </section>
+
+//         {/* لیست غذاها - کارت‌های کوچک‌تر */}
+//         <section className="mt-2 mb-12">
+//           <AnimatePresence mode="wait">
+//             <motion.div
+//               key={selectedDate}
+//               initial={{ opacity: 0, y: 20 }}
+//               animate={{ opacity: 1, y: 0 }}
+//               exit={{ opacity: 0, y: -10 }}
+//               className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+//             >
+//               {foodsForDay.length ? (
+//                 foodsForDay.map((food) => (
+//                 <div key={food.id} className="bg-white rounded-[2rem] shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col border border-gray-100/50 group overflow-hidden">
+                  
+//                   {/* بخش تصویر با امتیاز شناور */}
+//                   <div className="relative h-32 overflow-hidden">
+//                     <img 
+//                       src={food.photo || "https://via.placeholder.com/400x250"} 
+//                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" 
+//                       alt={food.name} 
+//                     />
+                    
+//                     {/* Badge امتیاز شناور مدرن */}
+//                     {foodRatings[food.id] && (
+//                       <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-md px-2 py-1 rounded-xl shadow-sm flex items-center gap-1 border border-white">
+//                         <span className="material-symbols-outlined !text-base text-orange-500" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
+//                         <span className="text-xs font-black text-[#503a2f] transform translate-y-[1px]">
+//                           {foodRatings[food.id].avg?.toFixed(1)}
+//                         </span>
+//                         <span className="text-[9px] text-gray-400 mt-0.5 mr-0.5">({foodRatings[food.id].count})</span>
+//                       </div>
+//                     )}
+//                   </div>
+
+//                   {/* محتوای کارت */}
+//                   <div className="p-5 flex flex-col flex-grow items-center text-center">
+//                     <h4 className="text-lg font-black text-[#503a2f] mb-1 group-hover:text-[#c97b39] transition-colors">
+//                       {food.name}
+//                     </h4>
+
+//                     <p className="text-[11px] text-gray-400 mb-5 line-clamp-1 font-medium leading-relaxed">
+//                       {food.description || "تجربه‌ای لذیذ از طعم‌های اصیل ایرانی"}
+//                     </p>
+                    
+//                     <button
+//                       onClick={() => saveSelection(menuId, food.id, food.name)}
+//                       className="w-full py-3 rounded-full bg-[#c97b39] text-white hover:bg-[#b06a31] font-extrabold text-sm transition-all shadow-[0_4px_12px_rgba(201,123,57,0.2)] hover:shadow-[0_6px_20px_rgba(201,123,57,0.3)] active:scale-95"
+//                     >
+//                       انتخاب ناهار امروز 🍛
+//                     </button>
+//                   </div>
+//                 </div>
+//               ))
+//               ) : (
+//                 <p className="text-center text-gray-500 col-span-full py-10">برای این روز منویی ثبت نشده است</p>
+//               )}
+//             </motion.div>
+//           </AnimatePresence>
+//         </section>
+//       </main>
+//     </div>
+//   );
+// }
+
+
+
+
+// import React, { useState, useEffect } from "react";
+// import moment from "moment-jalaali";
+// import { motion, AnimatePresence } from "framer-motion";
+// import "@fontsource/vazir";
+
+// import api from "../api";
+// import Navbar from "../components/Navbar";
+// import Toast from "../components/Toast";
+
+// moment.loadPersian({ dialect: "persian-modern" });
+
+// export default function MenuPage() {
+//   const today = moment();
+
+//   const [currentMonth, setCurrentMonth] = useState(moment());
+//   const [selectedDate, setSelectedDate] = useState(
+//     today.format("jYYYY-jMM-jDD")
 //   );
 
+//   const [menus, setMenus] = useState([]);
+//   const [foodsForDay, setFoodsForDay] = useState([]);
+//   const [menuId, setMenuId] = useState(null);
+
+//   const [selectedDays, setSelectedDays] = useState([]);
+//   const [monthStatus, setMonthStatus] = useState({});
+//   const [foodRatings, setFoodRatings] = useState({});
+
+//   const [showToast, setShowToast] = useState(false);
+//   const [toastMessage, setToastMessage] = useState("");
+//   const [toastType, setToastType] = useState("success");
+
+//   const showNotification = (message, type = "success") => {
+//     setToastMessage(message);
+//     setToastType(type);
+//     setShowToast(true);
+//     setTimeout(() => setShowToast(false), 2500);
+//   };
+
+//   useEffect(() => {
+//     api
+//       .get("menu/")
+//       .then((res) => setMenus(res.data))
+//       .catch(() => showNotification("❌ خطا در دریافت منو", "error"));
+//   }, []);
+
+//   useEffect(() => {
+//     api
+//       .get("food-ratings/")
+//       .then((res) => {
+//         const ratingMap = {};
+//         res.data.forEach((item) => {
+//           ratingMap[item.food__id] = {
+//             avg: item.avg_rating,
+//             count: item.total_votes,
+//           };
+//         });
+//         setFoodRatings(ratingMap);
+//       })
+//       .catch(() => {});
+//   }, []);
+
+//   useEffect(() => {
+//     api.get("user-selections/").then((res) => {
+//       const dated = res.data.map((sel) =>
+//         moment(sel.menu.date, "YYYY-MM-DD").format("jYYYY-jMM-jDD")
+//       );
+//       setSelectedDays(dated);
+//     });
+//   }, []);
+
+//   useEffect(() => {
+//     const year = currentMonth.jYear();
+//     const month = currentMonth.jMonth() + 1;
+
+//     api
+//       .get(`menu/month-status/?year=${year}&month=${month}`)
+//       .then((res) => setMonthStatus(res.data.days || {}))
+//       .catch(() => setMonthStatus({}));
+//   }, [currentMonth]);
+
+//   useEffect(() => {
+//     if (!monthStatus || !selectedDate) return;
+
+//     const currentInfo = monthStatus[selectedDate];
+//     if (!currentInfo || currentInfo.enabled !== false) return;
+
+//     const daysInMonth = moment.jDaysInMonth(
+//       currentMonth.jYear(),
+//       currentMonth.jMonth()
+//     );
+
+//     for (
+//       let i = moment(selectedDate, "jYYYY-jMM-jDD").jDate() + 1;
+//       i <= daysInMonth;
+//       i++
+//     ) {
+//       const nextDay = currentMonth
+//         .clone()
+//         .startOf("jMonth")
+//         .add(i - 1, "day")
+//         .format("jYYYY-jMM-jDD");
+
+//       if (monthStatus[nextDay]?.enabled === true) {
+//         setSelectedDate(nextDay);
+//         break;
+//       }
+//     }
+//   }, [selectedDate, monthStatus, currentMonth]);
+
+//   useEffect(() => {
+//     const converted = menus.map((m) => ({
+//       ...m,
+//       jDate: moment(m.date, "YYYY-MM-DD").format("jYYYY-jMM-jDD"),
+//     }));
+
+//     const menu = converted.find((m) => m.jDate === selectedDate);
+//     setFoodsForDay(menu ? menu.foods : []);
+//     setMenuId(menu ? menu.id : null);
+//   }, [selectedDate, menus]);
+
+//   const saveSelection = async (menuId, foodId, foodName) => {
+//     try {
+//       const res = await api.post("menu/select/", {
+//         menu: menuId,
+//         food: foodId,
+//       });
+
+//       if (res.status === 200) {
+//         showNotification(`🍽 ${foodName} با موفقیت ثبت شد`);
+
+//         if (!selectedDays.includes(selectedDate)) {
+//           setSelectedDays((prev) => [...prev, selectedDate]);
+//         }
+
+//         const nextDay = moment(selectedDate, "jYYYY-jMM-jDD").add(1, "day");
+//         if (nextDay.jMonth() !== currentMonth.jMonth()) {
+//           setCurrentMonth(nextDay);
+//         }
+//         setSelectedDate(nextDay.format("jYYYY-jMM-jDD"));
+//       }
+//     } catch {
+//       showNotification("❌ خطا در ثبت انتخاب", "error");
+//     }
+//   };
+
+//   const daysInMonth = moment.jDaysInMonth(
+//     currentMonth.jYear(),
+//     currentMonth.jMonth()
+//   );
+
+//   let firstDay = currentMonth.clone().startOf("jMonth").day();
+//   firstDay = (firstDay + 1) % 7;
+
+//   const blanks = Array(firstDay).fill(null);
+//   const days = Array.from({ length: daysInMonth }, (_, i) =>
+//     currentMonth.clone().startOf("jMonth").add(i, "days")
+//   );
+
+//   return (
+//     <div dir="rtl" className="min-h-screen bg-[#f8f5f2] font-[Vazir]">
+//       <Navbar active="menu" />
+//       <Toast show={showToast} message={toastMessage} type={toastType} />
+
+//       <main className="pt-24 max-w-6xl mx-auto px-4">
+//         <section className="grid grid-cols-1 md:grid-cols-2 gap-8">
+//           {/* تقویم */}
+//           <motion.div className="bg-white rounded-2xl shadow-md p-6">
+//             <div className="flex justify-between mb-4">
+//               <button onClick={() => setCurrentMonth(currentMonth.clone().subtract(1, "jMonth"))}>❮</button>
+//               <h3 className="font-semibold">{currentMonth.format("jMMMM jYYYY")}</h3>
+//               <button onClick={() => setCurrentMonth(currentMonth.clone().add(1, "jMonth"))}>❯</button>
+//             </div>
+//             <div className="grid grid-cols-7 text-center text-xs mb-2">
+//               {["ش", "ی", "د", "س", "چ", "پ", "ج"].map((d) => (<div key={d}>{d}</div>))}
+//             </div>
+//             <div className="grid grid-cols-7 gap-1 text-center text-sm">
+//               {blanks.map((_, i) => (<div key={i} />))}
+//               {days.map((day) => {
+//                 const dateStr = day.format("jYYYY-jMM-jDD");
+//                 const dayNumber = day.jDate();
+//                 const info = monthStatus[dateStr];
+//                 const isDisabled = info && info.enabled === false;
+//                 const isSelected = dateStr === selectedDate;
+//                 const isChosen = selectedDays.includes(dateStr);
+//                 return (
+//                   <button
+//                     key={dateStr}
+//                     disabled={isDisabled}
+//                     onClick={() => isDisabled ? showNotification(info?.reason || "⛔ غیرفعال", "error") : setSelectedDate(dateStr)}
+//                     className={`relative py-2 rounded-full font-medium ${
+//                         isDisabled ? info?.reason === "تعطیل" ? "bg-red-100 text-red-600" : "bg-gray-200 text-gray-500"
+//                         : isSelected ? "bg-[#c97b39] text-white"
+//                         : isChosen ? "bg-green-100 text-green-700" : "hover:bg-[#f0e6dd]"
+//                     }`}
+//                   >
+//                     {dayNumber}
+//                   </button>
+//                 );
+//               })}
+//             </div>
+//           </motion.div>
+
+//           {/* راهنمای وضعیت */}
+//           <div className="bg-white rounded-2xl shadow-md p-6">
+//             <h3 className="text-lg font-bold mb-4 text-[#7a4a24]">راهنمای وضعیت روزها در تقویم منو</h3>
+//             <ul className="space-y-3 text-sm">
+//               <li className="flex items-center gap-3"><span className="w-3 h-3 rounded-full bg-green-500" /><span>روزهایی که غذای آن‌ها ثبت شده است</span></li>
+//               <li className="flex items-center gap-3"><span className="w-3 h-3 rounded-full bg-[#c97b39]" /><span>روزی که در حال مشاهده آن هستید</span></li>
+//               <li className="flex items-center gap-3"><span className="w-3 h-3 rounded-full bg-gray-400" /><span>روزهای بدون منو یا غیرقابل انتخاب</span></li>
+//               <li className="flex items-center gap-3"><span className="w-3 h-3 rounded-full bg-red-500" /><span>روزهای تعطیل یا غیرفعال‌شده</span></li>
+//             </ul>
+//           </div>
+//         </section>
+
+//         {/* لیست غذاها - کارت‌های کوچک‌تر */}
+//         <section className="mt-8 mb-12">
+//           <AnimatePresence mode="wait">
+//             <motion.div
+//               key={selectedDate}
+//               initial={{ opacity: 0, y: 20 }}
+//               animate={{ opacity: 1, y: 0 }}
+//               exit={{ opacity: 0, y: -10 }}
+//               className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+//             >
+//               {foodsForDay.length ? (
+//                 foodsForDay.map((food) => (
+//                   <div key={food.id} className="bg-white rounded-xl shadow-md p-3 flex flex-col">
+//                     <img
+//                       src={food.photo || "https://via.placeholder.com/300"}
+//                       alt={food.name}
+//                       className="h-32 w-full object-cover rounded-lg"
+//                     />
+//                     <div className="mt-2 flex flex-col flex-grow">
+//                       <h4 className="text-base font-bold text-[#503a2f]">{food.name}</h4>
+                      
+//                       {/* نمایش امتیاز */}
+//                       {foodRatings[food.id] && (
+//                         <div className="flex items-center gap-1 mt-0.5 text-xs text-yellow-500">
+//                           <span>★ {foodRatings[food.id].avg?.toFixed(1)}</span>
+//                           <span className="text-gray-400">({foodRatings[food.id].count} رأی)</span>
+//                         </div>
+//                       )}
+
+//                       <p className="text-xs text-gray-600 mt-1 mb-3 line-clamp-2">
+//                         {food.description || "بدون توضیح"}
+//                       </p>
+                      
+//                       <button
+//                         onClick={() => saveSelection(menuId, food.id, food.name)}
+//                         className="w-full bg-[#c97b39] text-white py-1.5 rounded-lg text-sm font-medium hover:bg-[#b06a31] transition-colors mt-auto"
+//                       >
+//                         انتخاب 🍛
+//                       </button>
+//                     </div>
+//                   </div>
+//                 ))
+//               ) : (
+//                 <p className="text-center text-gray-500 col-span-full py-10">برای این روز منویی ثبت نشده است</p>
+//               )}
+//             </motion.div>
+//           </AnimatePresence>
+//         </section>
+//       </main>
+//     </div>
+//   );
 // }
+
+
+
+
+
+
+
+// import React, { useState, useEffect } from "react";
+// import moment from "moment-jalaali";
+// import { motion, AnimatePresence } from "framer-motion";
+// import "@fontsource/vazir";
+
+// import api from "../api";
+// import Navbar from "../components/Navbar";
+// import Toast from "../components/Toast";
+
+// moment.loadPersian({ dialect: "persian-modern" });
+
+// export default function MenuPage() {
+//   const today = moment();
+
+//   const [currentMonth, setCurrentMonth] = useState(moment());
+//   const [selectedDate, setSelectedDate] = useState(
+//     today.format("jYYYY-jMM-jDD")
+//   );
+
+//   const [menus, setMenus] = useState([]);
+//   const [foodsForDay, setFoodsForDay] = useState([]);
+//   const [menuId, setMenuId] = useState(null);
+
+//   const [selectedDays, setSelectedDays] = useState([]);
+//   const [monthStatus, setMonthStatus] = useState({});
+//   const [foodRatings, setFoodRatings] = useState({});
+
+//   const [showToast, setShowToast] = useState(false);
+//   const [toastMessage, setToastMessage] = useState("");
+//   const [toastType, setToastType] = useState("success");
+
+//   const showNotification = (message, type = "success") => {
+//     setToastMessage(message);
+//     setToastType(type);
+//     setShowToast(true);
+//     setTimeout(() => setShowToast(false), 2500);
+//   };
+
+//   useEffect(() => {
+//     api
+//       .get("menu/")
+//       .then((res) => setMenus(res.data))
+//       .catch(() => showNotification("❌ خطا در دریافت منو", "error"));
+//   }, []);
+
+//   useEffect(() => {
+//     api
+//       .get("food-ratings/")
+//       .then((res) => {
+//         const ratingMap = {};
+//         res.data.forEach((item) => {
+//           ratingMap[item.food__id] = {
+//             avg: item.avg_rating,
+//             count: item.total_votes,
+//           };
+//         });
+//         setFoodRatings(ratingMap);
+//       })
+//       .catch(() => {});
+//   }, []);
+
+//   useEffect(() => {
+//     api.get("user-selections/").then((res) => {
+//       const dated = res.data.map((sel) =>
+//         moment(sel.menu.date, "YYYY-MM-DD").format("jYYYY-jMM-jDD")
+//       );
+//       setSelectedDays(dated);
+//     });
+//   }, []);
+
+//   useEffect(() => {
+//     const year = currentMonth.jYear();
+//     const month = currentMonth.jMonth() + 1;
+
+//     api
+//       .get(`menu/month-status/?year=${year}&month=${month}`)
+//       .then((res) => setMonthStatus(res.data.days || {}))
+//       .catch(() => setMonthStatus({}));
+//   }, [currentMonth]);
+
+//   useEffect(() => {
+//     if (!monthStatus || !selectedDate) return;
+
+//     const currentInfo = monthStatus[selectedDate];
+//     if (!currentInfo || currentInfo.enabled !== false) return;
+
+//     const daysInMonth = moment.jDaysInMonth(
+//       currentMonth.jYear(),
+//       currentMonth.jMonth()
+//     );
+
+//     for (
+//       let i = moment(selectedDate, "jYYYY-jMM-jDD").jDate() + 1;
+//       i <= daysInMonth;
+//       i++
+//     ) {
+//       const nextDay = currentMonth
+//         .clone()
+//         .startOf("jMonth")
+//         .add(i - 1, "day")
+//         .format("jYYYY-jMM-jDD");
+
+//       if (monthStatus[nextDay]?.enabled === true) {
+//         setSelectedDate(nextDay);
+//         break;
+//       }
+//     }
+//   }, [selectedDate, monthStatus, currentMonth]);
+
+//   useEffect(() => {
+//     const converted = menus.map((m) => ({
+//       ...m,
+//       jDate: moment(m.date, "YYYY-MM-DD").format("jYYYY-jMM-jDD"),
+//     }));
+
+//     const menu = converted.find((m) => m.jDate === selectedDate);
+//     setFoodsForDay(menu ? menu.foods : []);
+//     setMenuId(menu ? menu.id : null);
+//   }, [selectedDate, menus]);
+
+//   const saveSelection = async (menuId, foodId, foodName) => {
+//     try {
+//       const res = await api.post("menu/select/", {
+//         menu: menuId,
+//         food: foodId,
+//       });
+
+//       if (res.status === 200) {
+//         showNotification(`🍽 ${foodName} با موفقیت ثبت شد`);
+
+//         if (!selectedDays.includes(selectedDate)) {
+//           setSelectedDays((prev) => [...prev, selectedDate]);
+//         }
+
+//         const nextDay = moment(selectedDate, "jYYYY-jMM-jDD").add(1, "day");
+//         if (nextDay.jMonth() !== currentMonth.jMonth()) {
+//           setCurrentMonth(nextDay);
+//         }
+//         setSelectedDate(nextDay.format("jYYYY-jMM-jDD"));
+//       }
+//     } catch {
+//       showNotification("❌ خطا در ثبت انتخاب", "error");
+//     }
+//   };
+
+//   const daysInMonth = moment.jDaysInMonth(
+//     currentMonth.jYear(),
+//     currentMonth.jMonth()
+//   );
+
+//   let firstDay = currentMonth.clone().startOf("jMonth").day();
+//   firstDay = (firstDay + 1) % 7;
+
+//   const blanks = Array(firstDay).fill(null);
+//   const days = Array.from({ length: daysInMonth }, (_, i) =>
+//     currentMonth.clone().startOf("jMonth").add(i, "days")
+//   );
+
+//   return (
+//     <div dir="rtl" className="min-h-screen bg-[#f8f5f2] font-[Vazir]">
+//       <Navbar active="menu" />
+//       <Toast show={showToast} message={toastMessage} type={toastType} />
+
+//       <main className="pt-24 max-w-6xl mx-auto px-4">
+//         <section className="grid grid-cols-1 md:grid-cols-2 gap-8">
+//           {/* تقویم */}
+//           <motion.div className="bg-white rounded-xl shadow-sm p-4 border border-gray-50" >
+//             <div className="flex justify-between mb-4">
+//               <button onClick={() => setCurrentMonth(currentMonth.clone().subtract(1, "jMonth"))}>❮</button>
+//               <h3 className="font-semibold">{currentMonth.format("jMMMM jYYYY")}</h3>
+//               <button onClick={() => setCurrentMonth(currentMonth.clone().add(1, "jMonth"))}>❯</button>
+//             </div>
+//             <div className="grid grid-cols-7 text-center text-xs mb-2">
+//               {["ش", "ی", "د", "س", "چ", "پ", "ج"].map((d) => (<div key={d}>{d}</div>))}
+//             </div>
+//             <div className="grid grid-cols-7 gap-1 text-center text-sm">
+//               {blanks.map((_, i) => (<div key={i} />))}
+//               {days.map((day) => {
+//                 const dateStr = day.format("jYYYY-jMM-jDD");
+//                 const dayNumber = day.jDate();
+//                 const info = monthStatus[dateStr];
+//                 const isDisabled = info && info.enabled === false;
+//                 const isSelected = dateStr === selectedDate;
+//                 const isChosen = selectedDays.includes(dateStr);
+//                 return (
+//                   <button
+//                     key={dateStr}
+//                     disabled={isDisabled}
+//                     onClick={() => isDisabled ? showNotification(info?.reason || "⛔ غیرفعال", "error") : setSelectedDate(dateStr)}
+//                     className={`relative py-2 rounded-full font-medium ${
+//                         isDisabled ? info?.reason === "تعطیل" ? "bg-red-100 text-red-600" : "bg-gray-200 text-gray-500"
+//                         : isSelected ? "bg-[#c97b39] text-white"
+//                         : isChosen ? "bg-green-100 text-green-700" : "hover:bg-[#f0e6dd]"
+//                     }`}
+//                   >
+//                     {dayNumber}
+//                   </button>
+//                 );
+//               })}
+//             </div>
+//           </motion.div>
+
+//           {/* راهنمای وضعیت */}
+//          <div className="bg-white rrounded-xl shadow-sm p-4 border border-gray-50 flex flex-col justify-center">
+//     <div>
+//       <h3 className="text-lg font-bold mb-6 text-[#503a2f] border-b border-[#f0e6dd] pb-3 flex items-center gap-2">
+//         راهنمای تقویم و وضعیت‌ها 🗓️
+//       </h3>
+//       <ul className="grid grid-cols-2 gap-2">
+//         <li className="flex items-center gap-3">
+//           <span className="w-3.5 h-3.5 rounded-full bg-[#22c55e] shadow-sm" />
+//           <span className="text-[#6F6259]">روزهای دارای رزرو قطعی ناهار</span>
+//         </li>
+//         <li className="flex items-center gap-3">
+//           <span className="w-3.5 h-3.5 rounded-full bg-[#c97b39] shadow-sm" />
+//           <span className="text-[#6F6259]">روز انتخاب شده (مشاهده منو)</span>
+//         </li>
+//         <li className="flex items-center gap-3">
+//           <span className="w-3.5 h-3.5 rounded-full bg-[#94a3b8] shadow-sm" />
+//           <span className="text-[#6F6259]">روزهای فاقد منو یا غیرقابل انتخاب</span>
+//         </li>
+//         <li className="flex items-center gap-3">
+//           <span className="w-3.5 h-3.5 rounded-full bg-[#ef4444] shadow-sm" />
+//           <span className="text-[#6F6259]">روزهای تعطیل یا غیرفعال شده</span>
+//         </li>
+//       </ul>
+//     </div>
+
+//     {/* باکس خلاصه فعالیت (پر کردن فضای خالی پایین کارت) */}
+//     <div className="mt-8 pt-6 border-t border-dashed border-[#e0d7cc]">
+//       <div className="bg-[#fdf8f4] p-5 rounded-xl border border-[#f5e6d8]">
+//         <p className="text-xs text-[#8b735a] leading-7">
+//           <strong className="block mb-2 text-[#c97b39] text-sm">خلاصه فعالیت شما:</strong>
+//           شما در ماه <span className="font-bold text-[#503a2f]">{currentMonth.format("jMMMM")}</span>، تا این لحظه برای <span className="font-bold text-[#d46211]">{selectedDays.filter(d => d.startsWith(currentMonth.format("jYYYY-jMM"))).length} روز</span> رزرو ناهار ثبت کرده‌اید.
+//         </p>
+//       </div>
+//       <p className="text-[10px] text-gray-400 mt-4 text-center italic">
+//         شرکت ریل‌پرداز نوآفرین - واحد رفاهی و تدارکات
+//       </p>
+//     </div>
+//   </div>
+//         </section>
+
+//         {/* لیست غذاها - کارت‌های کوچک‌تر */}
+//         <section className="mt-2 mb-12">
+//           <AnimatePresence mode="wait">
+//             <motion.div
+//               key={selectedDate}
+//               initial={{ opacity: 0, y: 20 }}
+//               animate={{ opacity: 1, y: 0 }}
+//               exit={{ opacity: 0, y: -10 }}
+//               className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+//             >
+//               {foodsForDay.length ? (
+//                 foodsForDay.map((food) => (
+//                 // جایگزین خط ۲۱۳ تا ۲۴۸
+// <div key={food.id} className="group bg-white/80 backdrop-blur-sm rounded-[2.5rem] p-3 border border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_20px_40px_rgba(201,123,57,0.12)] transition-all duration-500 flex flex-col overflow-hidden">
+  
+//   {/* بخش تصویر با لبه‌های گرد و زوم */}
+//   <div className="relative h-32 overflow-hidden rounded-[2rem]">
+//     <img 
+//       src={food.photo || "https://via.placeholder.com/400x250"} 
+//       className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700" 
+//       alt={food.name} 
+//     />
+//     {/* سایه ملایم روی عکس برای خوانایی امتیاز */}
+//     <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent" />
+    
+//     {/* امتیاز شیشه‌ای شناور روی عکس */}
+//     {foodRatings[food.id] && (
+//       <div className="absolute bottom-3 left-3 bg-white/20 backdrop-blur-md border border-white/30 px-2 py-1 rounded-full flex items-center gap-1 text-white shadow-xl">
+//         <span className="material-symbols-outlined !text-xs" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
+//         <span className="text-[10px] font-bold tabular-nums">{foodRatings[food.id].avg?.toFixed(1)}</span>
+//         <span className="text-[8px] opacity-70">({foodRatings[food.id].count})</span>
+//       </div>
+//     )}
+//   </div>
+
+//   {/* محتوا */}
+//   <div className="px-3 py-4 flex flex-col items-center text-center flex-grow">
+//     <h4 className="text-base font-black text-[#503a2f] mb-1 group-hover:text-[#c97b39] transition-colors">
+//       {food.name}
+//     </h4>
+//     <p className="text-[10px] text-gray-400 mb-4 line-clamp-1 italic font-medium">
+//       {food.description || "تجربه‌ای لذیذ از ناهار شرکت نُوآفرین"}
+//     </p>
+    
+//     <button
+//       onClick={() => saveSelection(menuId, food.id, food.name)}
+//       className="w-full py-2.5 rounded-full bg-gradient-to-r from-[#c97b39] to-[#d48c52] text-white font-bold text-xs shadow-[0_4px_15px_rgba(201,123,57,0.3)] hover:shadow-[0_8px_25px_rgba(201,123,57,0.4)] hover:-translate-y-0.5 active:scale-95 transition-all duration-300"
+//     >
+//       رزرو این ناهار 🍛
+//     </button>
+//   </div>
+// </div>
+//               ))
+//               ) : (
+//                 <p className="text-center text-gray-500 col-span-full py-10">برای این روز منویی ثبت نشده است</p>
+//               )}
+//             </motion.div>
+//           </AnimatePresence>
+//         </section>
+//       </main>
+//     </div>
+//   );
+// }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -709,7 +989,7 @@ import moment from "moment-jalaali";
 import { motion, AnimatePresence } from "framer-motion";
 import "@fontsource/vazir";
 
-import api from "../api"; // ✅ axios سراسری با refresh token
+import api from "../api";
 import Navbar from "../components/Navbar";
 import Toast from "../components/Toast";
 
@@ -717,6 +997,7 @@ moment.loadPersian({ dialect: "persian-modern" });
 
 export default function MenuPage() {
   const today = moment();
+
   const [currentMonth, setCurrentMonth] = useState(moment());
   const [selectedDate, setSelectedDate] = useState(
     today.format("jYYYY-jMM-jDD")
@@ -727,11 +1008,13 @@ export default function MenuPage() {
   const [menuId, setMenuId] = useState(null);
 
   const [selectedDays, setSelectedDays] = useState([]);
-  const [limitMessage, setLimitMessage] = useState("");
+  const [monthStatus, setMonthStatus] = useState({});
+  const [foodRatings, setFoodRatings] = useState({});
 
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
   const [toastType, setToastType] = useState("success");
+  const [selectionsMap, setSelectionsMap] = useState({});
 
   const showNotification = (message, type = "success") => {
     setToastMessage(message);
@@ -740,36 +1023,84 @@ export default function MenuPage() {
     setTimeout(() => setShowToast(false), 2500);
   };
 
-  // ------------------ دریافت منو ------------------
   useEffect(() => {
-    const fetchMenus = async () => {
-      try {
-        const res = await api.get("menu/");
-        setMenus(res.data);
-      } catch {
-        showNotification("❌ خطا در دریافت منو", "error");
-      }
-    };
-    fetchMenus();
+    api
+      .get("menu/")
+      .then((res) => setMenus(res.data))
+      .catch(() => showNotification("❌ خطا در دریافت منو", "error"));
   }, []);
 
-  // ------------------ دریافت انتخاب‌های قبلی ------------------
   useEffect(() => {
-    const fetchSelections = async () => {
-      try {
-        const res = await api.get("user-selections/");
-        const dated = res.data.map((sel) =>
-          moment(sel.menu.date, "YYYY-MM-DD").format("jYYYY-jMM-jDD")
-        );
-        setSelectedDays(dated);
-      } catch {
-        // اگر کاربر لاگین نباشد یا refresh منقضی شود
-      }
-    };
-    fetchSelections();
+    api
+      .get("food-ratings/")
+      .then((res) => {
+        const ratingMap = {};
+        res.data.forEach((item) => {
+          ratingMap[item.food__id] = {
+            avg: item.avg_rating,
+            count: item.total_votes,
+          };
+        });
+        setFoodRatings(ratingMap);
+      })
+      .catch(() => {});
   }, []);
 
-  // ------------------ تنظیم غذاها ------------------
+useEffect(() => {
+  api.get("user-selections/").then((res) => {
+    const mapping = {};
+    if (res.data && Array.isArray(res.data)) {
+      res.data.forEach((sel) => {
+        // ⭐ اصلاح شد: استفاده از selected_food مطابق با مدل جنگو
+        if (sel?.menu?.date && sel?.selected_food?.id) {
+          const dateKey = moment(sel.menu.date, "YYYY-MM-DD").format("jYYYY-jMM-jDD");
+          mapping[dateKey] = sel.selected_food.id; 
+        }
+      });
+    }
+    setSelectionsMap(mapping);
+    setSelectedDays(Object.keys(mapping));
+  }).catch(err => console.error("Error fetching selections:", err));
+}, []);
+  useEffect(() => {
+    const year = currentMonth.jYear();
+    const month = currentMonth.jMonth() + 1;
+
+    api
+      .get(`menu/month-status/?year=${year}&month=${month}`)
+      .then((res) => setMonthStatus(res.data.days || {}))
+      .catch(() => setMonthStatus({}));
+  }, [currentMonth]);
+
+  useEffect(() => {
+    if (!monthStatus || !selectedDate) return;
+
+    const currentInfo = monthStatus[selectedDate];
+    if (!currentInfo || currentInfo.enabled !== false) return;
+
+    const daysInMonth = moment.jDaysInMonth(
+      currentMonth.jYear(),
+      currentMonth.jMonth()
+    );
+
+    for (
+      let i = moment(selectedDate, "jYYYY-jMM-jDD").jDate() + 1;
+      i <= daysInMonth;
+      i++
+    ) {
+      const nextDay = currentMonth
+        .clone()
+        .startOf("jMonth")
+        .add(i - 1, "day")
+        .format("jYYYY-jMM-jDD");
+
+      if (monthStatus[nextDay]?.enabled === true) {
+        setSelectedDate(nextDay);
+        break;
+      }
+    }
+  }, [selectedDate, monthStatus, currentMonth]);
+
   useEffect(() => {
     const converted = menus.map((m) => ({
       ...m,
@@ -781,64 +1112,25 @@ export default function MenuPage() {
     setMenuId(menu ? menu.id : null);
   }, [selectedDate, menus]);
 
-  // ------------------ محدودیت ۲۴ ساعت ------------------
-  const checkLimit = (gregorianDate) => {
-    const now = moment();
-    const target = moment(gregorianDate, "YYYY-MM-DD");
-    const hoursDiff = target.diff(now, "hours");
-
-    if (hoursDiff <= 0) {
-      return { allowed: false, msg: "⛔ این روز گذشته است." };
-    }
-
-    if (hoursDiff < 24) {
-      return { allowed: false, msg: "⛔ مهلت انتخاب برای این روز تمام شده است." };
-    }
-
-    return { allowed: true, msg: "" };
-  };
-
-  // ------------------ ثبت غذا ------------------
-  const saveSelection = async (menuId, foodId, foodName) => {
-    if (limitMessage) {
-      showNotification(limitMessage, "error");
-      return;
-    }
-
+ const saveSelection = async (mId, foodId, foodName) => {
     try {
-      const res = await api.post("menu/select/", {
-        menu: menuId,
-        food: foodId,
-      });
-
-      if (res.status === 200) {
-        showNotification(`🍽 ${foodName} با موفقیت ثبت شد`, "success");
-
-        if (!selectedDays.includes(selectedDate)) {
-          setSelectedDays((prev) => [...prev, selectedDate]);
-        }
-
-        const currentMoment = moment(selectedDate, "jYYYY-jMM-jDD");
-        const nextDay = currentMoment.add(1, "day");
-        const nextDayStr = nextDay.format("jYYYY-jMM-jDD");
-
-        if (nextDay.jMonth() !== currentMonth.jMonth()) {
-          setCurrentMonth(nextDay);
-        }
-
-        setSelectedDate(nextDayStr);
+      const res = await api.post("menu/select/", { menu: mId, food: foodId });
+      if (res.status === 200 || res.status === 201) {
+        // تغییر آنی تیک سبز روی همان کارت
+        setSelectionsMap(prev => ({ ...prev, [selectedDate]: foodId }));
+        if (!selectedDays.includes(selectedDate)) setSelectedDays(prev => [...prev, selectedDate]);
+        
+        // مکث ۸۰۰ میلی‌ثانیه‌ای برای لذت بردن از افکت رزرو، سپس رفتن به روز بعد
+        setTimeout(() => {
+          const nextDay = moment(selectedDate, "jYYYY-jMM-jDD").add(1, "day");
+          if (nextDay.jMonth() !== currentMonth.jMonth()) setCurrentMonth(nextDay);
+          setSelectedDate(nextDay.format("jYYYY-jMM-jDD"));
+        }, 800);
       }
     } catch {
       showNotification("❌ خطا در ثبت انتخاب", "error");
     }
   };
-
-  // ------------------ تقویم ------------------
-  const goToPrevMonth = () =>
-    setCurrentMonth(currentMonth.clone().subtract(1, "jMonth"));
-  const goToNextMonth = () =>
-    setCurrentMonth(currentMonth.clone().add(1, "jMonth"));
-
   const daysInMonth = moment.jDaysInMonth(
     currentMonth.jYear(),
     currentMonth.jMonth()
@@ -853,170 +1145,755 @@ export default function MenuPage() {
   );
 
   return (
-    <div
-      dir="rtl"
-      className="min-h-screen bg-[#f8f5f2] font-[Vazir] flex flex-col items-center relative"
-    >
+    <div dir="rtl" className="min-h-screen bg-[#f8f5f2] font-[Vazir]">
       <Navbar active="menu" />
       <Toast show={showToast} message={toastMessage} type={toastType} />
 
-      {/* ------------------ تقویم ------------------ */}
-      <section className="w-full max-w-6xl mt-28 flex flex-col md:flex-row justify-between items-start gap-10 px-6 sm:px-10">
-        <motion.div
-          layout
-          className="flex-1 bg-white rounded-2xl shadow-md p-6 sm:p-8"
-        >
-          <div className="flex justify-between items-center mb-5">
-            <button
-              onClick={goToPrevMonth}
-              className="text-gray-500 hover:text-[#c97b39]"
-            >
-              ❮
-            </button>
-
-            <h3 className="font-semibold text-[#503a2f] text-lg">
-              {currentMonth.format("jMMMM jYYYY")}
-            </h3>
-
-            <button
-              onClick={goToNextMonth}
-              className="text-gray-500 hover:text-[#c97b39]"
-            >
-              ❯
-            </button>
-          </div>
-
-          <div className="grid grid-cols-7 gap-1 text-center text-sm text-gray-600 mb-2">
-            {["ش", "ی", "د", "س", "چ", "پ", "ج"].map((d) => (
-              <div key={d} className="font-semibold">
-                {d}
-              </div>
-            ))}
-          </div>
-
-          <div className="grid grid-cols-7 gap-1 text-center text-sm">
-            {blanks.map((_, i) => (
-              <div key={i}></div>
-            ))}
-
-            {days.map((day) => {
-              const dateStr = day.format("jYYYY-jMM-jDD");
-              const gregorian = day.format("YYYY-MM-DD");
-
-              const limit = checkLimit(gregorian);
-
-              const isToday = day.isSame(moment(), "day");
-              const isSelected = dateStr === selectedDate;
-              const isChosen = selectedDays.includes(dateStr);
-
-              const disabled = !limit.allowed;
-
-              return (
-                <motion.button
-                  key={dateStr}
-                  disabled={disabled}
-                  whileHover={disabled ? {} : { scale: 1.08 }}
-                  whileTap={disabled ? {} : { scale: 0.95 }}
-                  onClick={() => {
-                    if (disabled) {
-                      showNotification(limit.msg, "error");
-                      return;
-                    }
-                    setLimitMessage("");
-                    setSelectedDate(dateStr);
-                  }}
-                  className={`relative py-2 sm:py-3 rounded-full transition-all font-medium
-                    ${
-                      disabled
-                        ? "bg-gray-200 text-gray-400 cursor-not-allowed opacity-60"
-                        : isSelected
-                        ? "bg-[#c97b39] text-white"
-                        : isChosen
-                        ? "bg-green-100 text-green-700 border border-green-400"
-                        : isToday
-                        ? "bg-[#f5e6d8] text-[#503a2f]"
-                        : "text-gray-700 hover:bg-[#f0e6dd]"
+      <main className="pt-24 max-w-6xl mx-auto px-4">
+        <section className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {/* تقویم */}
+          <motion.div className="bg-white rounded-xl shadow-sm p-4 border border-gray-50">
+            <div className="flex justify-between mb-4">
+              <button onClick={() => setCurrentMonth(currentMonth.clone().subtract(1, "jMonth"))}>❮</button>
+              <h3 className="font-semibold">{currentMonth.format("jMMMM jYYYY")}</h3>
+              <button onClick={() => setCurrentMonth(currentMonth.clone().add(1, "jMonth"))}>❯</button>
+            </div>
+            <div className="grid grid-cols-7 text-center text-xs mb-2">
+              {["ش", "ی", "د", "س", "چ", "پ", "ج"].map((d) => (<div key={d}>{d}</div>))}
+            </div>
+            <div className="grid grid-cols-7 gap-1 text-center text-sm">
+              {blanks.map((_, i) => (<div key={i} />))}
+              {days.map((day) => {
+                const dateStr = day.format("jYYYY-jMM-jDD");
+                const dayNumber = day.jDate();
+                const info = monthStatus[dateStr];
+                const isDisabled = info && info.enabled === false;
+                const isSelected = dateStr === selectedDate;
+                const isChosen = selectedDays.includes(dateStr);
+                return (
+                  <button
+                    key={dateStr}
+                    disabled={isDisabled}
+                    onClick={() => isDisabled ? showNotification(info?.reason || "⛔ غیرفعال", "error") : setSelectedDate(dateStr)}
+                    className={`relative py-2 rounded-full font-medium ${
+                        isDisabled ? info?.reason === "تعطیل" ? "bg-red-100 text-red-600" : "bg-gray-200 text-gray-500"
+                        : isSelected ? "bg-[#c97b39] text-white"
+                        : isChosen ? "bg-green-100 text-green-700" : "hover:bg-[#f0e6dd]"
                     }`}
-                >
-                  {day.format("jD")}
-                  {!disabled && isChosen && (
-                    <span className="absolute top-1 right-2 text-green-600 text-lg">
-                      ✔
-                    </span>
-                  )}
-                </motion.button>
-              );
-            })}
-          </div>
-        </motion.div>
-
-        <motion.div
-          layout
-          className="flex-1 bg-white rounded-2xl shadow-md p-6 sm:p-8 text-center md:text-right"
-        >
-          <h2 className="text-xl sm:text-2xl font-bold text-[#503a2f] mb-4">
-            وعده‌های غذایی خود را برای این ماه انتخاب کنید
-          </h2>
-          <p className="text-[#7c6656] text-sm sm:text-base">
-            با انتخاب دکمه زیر هر غذا، به صورت خودکار به روز بعد هدایت می‌شوید.
-          </p>
-        </motion.div>
-      </section>
-
-      {/* ------------------ لیست غذا ------------------ */}
-      <section className="w-full max-w-6xl bg-white shadow-md rounded-2xl mt-8 p-6 sm:p-8 mb-10">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={selectedDate}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.3 }}
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
-          >
-            {foodsForDay.length ? (
-              foodsForDay.map((food) => (
-                <motion.div
-                  key={food.id}
-                  whileHover={{ scale: 1.02 }}
-                  className="bg-white rounded-2xl border border-[#f1e8e0] overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col"
-                >
-                  <img
-                    src={
-                      food.photo ||
-                      "https://via.placeholder.com/300x200?text=No+Image"
-                    }
-                    alt={food.name}
-                    className="h-44 w-full object-cover"
-                  />
-
-                  <div className="p-4 flex flex-col flex-grow">
-                    <h4 className="text-lg font-semibold text-[#503a2f]">
-                      {food.name}
-                    </h4>
-                    <p className="text-sm text-[#7c6656] mt-1 mb-4 flex-grow">
-                      {food.description || "بدون توضیحات"}
-                    </p>
-
-                    <button
-                      onClick={() =>
-                        saveSelection(menuId, food.id, food.name)
-                      }
-                      className="w-full py-2 rounded-xl font-bold text-white bg-[#c97b39] hover:bg-[#b76c2d]"
-                    >
-                      انتخاب 🍛
-                    </button>
-                  </div>
-                </motion.div>
-              ))
-            ) : (
-              <p className="col-span-full text-center text-gray-500">
-                برای این روز هنوز منویی ثبت نشده 🍽️
-              </p>
-            )}
+                  >
+                    {dayNumber}
+                  </button>
+                );
+              })}
+            </div>
           </motion.div>
-        </AnimatePresence>
-      </section>
+
+          {/* راهنمای وضعیت */}
+         <div className="bg-white rrounded-xl shadow-sm p-4 border border-gray-50 flex flex-col justify-center">
+    <div>
+      <h3 className="text-lg font-bold mb-6 text-[#503a2f] border-b border-[#f0e6dd] pb-3 flex items-center gap-2">
+        راهنمای تقویم و وضعیت‌ها 🗓️
+      </h3>
+      <ul className="grid grid-cols-2 gap-2">
+        <li className="flex items-center gap-3">
+          <span className="w-3.5 h-3.5 rounded-full bg-[#22c55e] shadow-sm" />
+          <span className="text-[#6F6259]">روزهای دارای رزرو قطعی ناهار</span>
+        </li>
+        <li className="flex items-center gap-3">
+          <span className="w-3.5 h-3.5 rounded-full bg-[#c97b39] shadow-sm" />
+          <span className="text-[#6F6259]">روز انتخاب شده (مشاهده منو)</span>
+        </li>
+        <li className="flex items-center gap-3">
+          <span className="w-3.5 h-3.5 rounded-full bg-[#94a3b8] shadow-sm" />
+          <span className="text-[#6F6259]">روزهای فاقد منو یا غیرقابل انتخاب</span>
+        </li>
+        <li className="flex items-center gap-3">
+          <span className="w-3.5 h-3.5 rounded-full bg-[#ef4444] shadow-sm" />
+          <span className="text-[#6F6259]">روزهای تعطیل یا غیرفعال شده</span>
+        </li>
+      </ul>
+    </div>
+
+    {/* باکس خلاصه فعالیت (پر کردن فضای خالی پایین کارت) */}
+    <div className="mt-8 pt-6 border-t border-dashed border-[#e0d7cc]">
+      <div className="bg-[#fdf8f4] p-5 rounded-xl border border-[#f5e6d8]">
+        <p className="text-xs text-[#8b735a] leading-7">
+          <strong className="block mb-2 text-[#c97b39] text-sm">خلاصه فعالیت شما:</strong>
+          شما در ماه <span className="font-bold text-[#503a2f]">{currentMonth.format("jMMMM")}</span>، تا این لحظه برای <span className="font-bold text-[#d46211]">{selectedDays.filter(d => d.startsWith(currentMonth.format("jYYYY-jMM"))).length} روز</span> رزرو ناهار ثبت کرده‌اید.
+        </p>
+      </div>
+      <p className="text-[10px] text-gray-400 mt-4 text-center italic">
+        شرکت ریل‌پرداز نوآفرین - واحد رفاهی و تدارکات
+      </p>
+    </div>
+  </div>
+        </section>
+
+        {/* لیست غذاها - کارت‌های کوچک‌تر */}
+        <section className="mt-4 mb-12">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={selectedDate}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+            >
+              {foodsForDay.length ? (
+                foodsForDay.map((food) => {
+                  const isThisSelected = selectionsMap[selectedDate] === food.id;
+
+                  return (
+                    <div 
+                      key={food.id} 
+                      className={`rounded-[2rem] transition-all duration-500 flex flex-col border overflow-hidden group
+                        ${isThisSelected 
+                          ? 'border-green-500 shadow-[0_0_30px_rgba(34,197,94,0.3)] bg-green-50/10 scale-[1.02]' 
+                          : 'bg-white shadow-sm hover:shadow-xl border-gray-100/50'}`}
+                    >
+                      <div className="relative h-28 overflow-hidden">
+                        <img src={food.photo || "https://via.placeholder.com/400x250"} className={`w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 ${isThisSelected ? 'blur-[1px]' : ''}`} alt={food.name} />
+                        {isThisSelected && (
+                          <div className="absolute inset-0 bg-green-600/20 flex items-center justify-center backdrop-blur-[1px]">
+                            <motion.span initial={{ scale: 0 }} animate={{ scale: 1.1 }} className="material-symbols-outlined !text-6xl text-white drop-shadow-lg">check_circle</motion.span>
+                          </div>
+                        )}
+                        {!isThisSelected && foodRatings[food.id] && (
+                          <div className="absolute top-3 left-3 bg-white/40 backdrop-blur-md px-2 py-1 rounded-xl shadow-sm flex items-center gap-1 border border-white/40">
+                            <span className="material-symbols-outlined !text-base text-orange-500" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
+                            <span className="text-xs font-black text-[#503a2f] transform translate-y-[1px]">{foodRatings[food.id].avg?.toFixed(1)}</span>
+                            <span className="text-[9px] text-gray-500 mt-0.5 mr-0.5">({foodRatings[food.id].count})</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="p-5 flex flex-col flex-grow items-center text-center">
+                        <h4 className={`text-lg font-black mb-1 transition-colors ${isThisSelected ? 'text-green-700' : 'text-[#503a2f] group-hover:text-[#c97b39]'}`}>{food.name}</h4>
+                        <p className="text-[11px] text-gray-400 mb-5 line-clamp-1 italic">{food.description || "تجربه‌ای لذیذ از طعم‌های اصیل در نُوآفرین"}</p>
+                        
+                        <button
+                          onClick={() => saveSelection(menuId, food.id, food.name)}
+                          className={`w-full py-3 rounded-full font-extrabold text-sm transition-all shadow-md active:scale-95 flex items-center justify-center gap-2
+                            ${isThisSelected ? 'bg-green-500 text-white cursor-default' : 'bg-[#c97b39] text-white hover:bg-[#b06a31]'}`}
+                        >
+                          {isThisSelected ? <>رزرو شد <span className="material-symbols-outlined !text-base">task_alt</span></> : 'انتخاب ناهار امروز 🍛'}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="col-span-full py-16 text-center bg-white rounded-[2rem] border-2 border-dashed border-gray-100">
+                  <p className="text-gray-400 font-bold">برای این تاریخ منویی تعریف نشده است 🍽️</p>
+                </div>
+              )}
+            </motion.div>
+          </AnimatePresence>
+        </section>
+      </main>
     </div>
   );
 }
+
+
+
+
+
+
+
+// import React, { useState, useEffect } from "react";
+// import moment from "moment-jalaali";
+// import { motion, AnimatePresence } from "framer-motion";
+// import "@fontsource/vazir";
+
+// import api from "../api";
+// import Navbar from "../components/Navbar";
+// import Toast from "../components/Toast";
+
+// moment.loadPersian({ dialect: "persian-modern" });
+
+// export default function MenuPage() {
+//   const today = moment();
+
+//   const [currentMonth, setCurrentMonth] = useState(moment());
+//   const [selectedDate, setSelectedDate] = useState(
+//     today.format("jYYYY-jMM-jDD")
+//   );
+
+//   const [menus, setMenus] = useState([]);
+//   const [foodsForDay, setFoodsForDay] = useState([]);
+//   const [menuId, setMenuId] = useState(null);
+
+//   const [selectedDays, setSelectedDays] = useState([]);
+//   const [monthStatus, setMonthStatus] = useState({});
+//   const [foodRatings, setFoodRatings] = useState({});
+
+//   const [showToast, setShowToast] = useState(false);
+//   const [toastMessage, setToastMessage] = useState("");
+//   const [toastType, setToastType] = useState("success");
+
+//   const showNotification = (message, type = "success") => {
+//     setToastMessage(message);
+//     setToastType(type);
+//     setShowToast(true);
+//     setTimeout(() => setShowToast(false), 2500);
+//   };
+
+//   useEffect(() => {
+//     api
+//       .get("menu/")
+//       .then((res) => setMenus(res.data))
+//       .catch(() => showNotification("❌ خطا در دریافت منو", "error"));
+//   }, []);
+
+//   useEffect(() => {
+//     api
+//       .get("food-ratings/")
+//       .then((res) => {
+//         const ratingMap = {};
+//         res.data.forEach((item) => {
+//           ratingMap[item.food__id] = {
+//             avg: item.avg_rating,
+//             count: item.total_votes,
+//           };
+//         });
+//         setFoodRatings(ratingMap);
+//       })
+//       .catch(() => {});
+//   }, []);
+
+//   useEffect(() => {
+//     api.get("user-selections/").then((res) => {
+//       const dated = res.data.map((sel) =>
+//         moment(sel.menu.date, "YYYY-MM-DD").format("jYYYY-jMM-jDD")
+//       );
+//       setSelectedDays(dated);
+//     });
+//   }, []);
+
+//   useEffect(() => {
+//     const year = currentMonth.jYear();
+//     const month = currentMonth.jMonth() + 1;
+
+//     api
+//       .get(`menu/month-status/?year=${year}&month=${month}`)
+//       .then((res) => setMonthStatus(res.data.days || {}))
+//       .catch(() => setMonthStatus({}));
+//   }, [currentMonth]);
+
+//   useEffect(() => {
+//     if (!monthStatus || !selectedDate) return;
+
+//     const currentInfo = monthStatus[selectedDate];
+//     if (!currentInfo || currentInfo.enabled !== false) return;
+
+//     const daysInMonth = moment.jDaysInMonth(
+//       currentMonth.jYear(),
+//       currentMonth.jMonth()
+//     );
+
+//     for (
+//       let i = moment(selectedDate, "jYYYY-jMM-jDD").jDate() + 1;
+//       i <= daysInMonth;
+//       i++
+//     ) {
+//       const nextDay = currentMonth
+//         .clone()
+//         .startOf("jMonth")
+//         .add(i - 1, "day")
+//         .format("jYYYY-jMM-jDD");
+
+//       if (monthStatus[nextDay]?.enabled === true) {
+//         setSelectedDate(nextDay);
+//         break;
+//       }
+//     }
+//   }, [selectedDate, monthStatus, currentMonth]);
+
+//   useEffect(() => {
+//     const converted = menus.map((m) => ({
+//       ...m,
+//       jDate: moment(m.date, "YYYY-MM-DD").format("jYYYY-jMM-jDD"),
+//     }));
+
+//     const menu = converted.find((m) => m.jDate === selectedDate);
+//     setFoodsForDay(menu ? menu.foods : []);
+//     setMenuId(menu ? menu.id : null);
+//   }, [selectedDate, menus]);
+
+//   const saveSelection = async (menuId, foodId, foodName) => {
+//     try {
+//       const res = await api.post("menu/select/", {
+//         menu: menuId,
+//         food: foodId,
+//       });
+
+//       if (res.status === 200) {
+//         showNotification(`🍽 ${foodName} با موفقیت ثبت شد`);
+
+//         if (!selectedDays.includes(selectedDate)) {
+//           setSelectedDays((prev) => [...prev, selectedDate]);
+//         }
+
+//         const nextDay = moment(selectedDate, "jYYYY-jMM-jDD").add(1, "day");
+//         if (nextDay.jMonth() !== currentMonth.jMonth()) {
+//           setCurrentMonth(nextDay);
+//         }
+//         setSelectedDate(nextDay.format("jYYYY-jMM-jDD"));
+//       }
+//     } catch {
+//       showNotification("❌ خطا در ثبت انتخاب", "error");
+//     }
+//   };
+
+//   const daysInMonth = moment.jDaysInMonth(
+//     currentMonth.jYear(),
+//     currentMonth.jMonth()
+//   );
+
+//   let firstDay = currentMonth.clone().startOf("jMonth").day();
+//   firstDay = (firstDay + 1) % 7;
+
+//   const blanks = Array(firstDay).fill(null);
+//   const days = Array.from({ length: daysInMonth }, (_, i) =>
+//     currentMonth.clone().startOf("jMonth").add(i, "days")
+//   );
+
+//   return (
+//     <div dir="rtl" className="min-h-screen bg-[#f8f5f2] font-[Vazir]">
+//       <Navbar active="menu" />
+//       <Toast show={showToast} message={toastMessage} type={toastType} />
+
+//       <main className="pt-24 max-w-6xl mx-auto px-4">
+//         <section className="grid grid-cols-1 md:grid-cols-2 gap-8">
+//           {/* تقویم */}
+//           <motion.div className="bg-white rounded-2xl shadow-md p-6">
+//             <div className="flex justify-between mb-4">
+//               <button onClick={() => setCurrentMonth(currentMonth.clone().subtract(1, "jMonth"))}>❮</button>
+//               <h3 className="font-semibold">{currentMonth.format("jMMMM jYYYY")}</h3>
+//               <button onClick={() => setCurrentMonth(currentMonth.clone().add(1, "jMonth"))}>❯</button>
+//             </div>
+//             <div className="grid grid-cols-7 text-center text-xs mb-2">
+//               {["ش", "ی", "د", "س", "چ", "پ", "ج"].map((d) => (<div key={d}>{d}</div>))}
+//             </div>
+//             <div className="grid grid-cols-7 gap-1 text-center text-sm">
+//               {blanks.map((_, i) => (<div key={i} />))}
+//               {days.map((day) => {
+//                 const dateStr = day.format("jYYYY-jMM-jDD");
+//                 const dayNumber = day.jDate();
+//                 const info = monthStatus[dateStr];
+//                 const isDisabled = info && info.enabled === false;
+//                 const isSelected = dateStr === selectedDate;
+//                 const isChosen = selectedDays.includes(dateStr);
+//                 return (
+//                   <button
+//                     key={dateStr}
+//                     disabled={isDisabled}
+//                     onClick={() => isDisabled ? showNotification(info?.reason || "⛔ غیرفعال", "error") : setSelectedDate(dateStr)}
+//                     className={`relative py-2 rounded-full font-medium ${
+//                         isDisabled ? info?.reason === "تعطیل" ? "bg-red-100 text-red-600" : "bg-gray-200 text-gray-500"
+//                         : isSelected ? "bg-[#c97b39] text-white"
+//                         : isChosen ? "bg-green-100 text-green-700" : "hover:bg-[#f0e6dd]"
+//                     }`}
+//                   >
+//                     {dayNumber}
+//                   </button>
+//                 );
+//               })}
+//             </div>
+//           </motion.div>
+
+//           {/* راهنمای وضعیت */}
+//           <div className="bg-white rounded-2xl shadow-md p-6">
+//             <h3 className="text-lg font-bold mb-4 text-[#7a4a24]">راهنمای وضعیت روزها در تقویم منو</h3>
+//             <ul className="space-y-3 text-sm">
+//               <li className="flex items-center gap-3"><span className="w-3 h-3 rounded-full bg-green-500" /><span>روزهایی که غذای آن‌ها ثبت شده است</span></li>
+//               <li className="flex items-center gap-3"><span className="w-3 h-3 rounded-full bg-[#c97b39]" /><span>روزی که در حال مشاهده آن هستید</span></li>
+//               <li className="flex items-center gap-3"><span className="w-3 h-3 rounded-full bg-gray-400" /><span>روزهای بدون منو یا غیرقابل انتخاب</span></li>
+//               <li className="flex items-center gap-3"><span className="w-3 h-3 rounded-full bg-red-500" /><span>روزهای تعطیل یا غیرفعال‌شده</span></li>
+//             </ul>
+//           </div>
+//         </section>
+
+//         {/* لیست غذاها - کارت‌های کوچک‌تر */}
+//         <section className="mt-8 mb-12">
+//           <AnimatePresence mode="wait">
+//             <motion.div
+//               key={selectedDate}
+//               initial={{ opacity: 0, y: 20 }}
+//               animate={{ opacity: 1, y: 0 }}
+//               exit={{ opacity: 0, y: -10 }}
+//               className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+//             >
+//               {foodsForDay.length ? (
+//                 foodsForDay.map((food) => (
+//                   <div key={food.id} className="bg-white rounded-xl shadow-md p-3 flex flex-col">
+//                     <img
+//                       src={food.photo || "https://via.placeholder.com/300"}
+//                       alt={food.name}
+//                       className="h-32 w-full object-cover rounded-lg"
+//                     />
+//                     <div className="mt-2 flex flex-col flex-grow">
+//                       <h4 className="text-base font-bold text-[#503a2f]">{food.name}</h4>
+                      
+//                       {/* نمایش امتیاز */}
+//                       {foodRatings[food.id] && (
+//                         <div className="flex items-center gap-1 mt-0.5 text-xs text-yellow-500">
+//                           <span>★ {foodRatings[food.id].avg?.toFixed(1)}</span>
+//                           <span className="text-gray-400">({foodRatings[food.id].count} رأی)</span>
+//                         </div>
+//                       )}
+
+//                       <p className="text-xs text-gray-600 mt-1 mb-3 line-clamp-2">
+//                         {food.description || "بدون توضیح"}
+//                       </p>
+                      
+//                       <button
+//                         onClick={() => saveSelection(menuId, food.id, food.name)}
+//                         className="w-full bg-[#c97b39] text-white py-1.5 rounded-lg text-sm font-medium hover:bg-[#b06a31] transition-colors mt-auto"
+//                       >
+//                         انتخاب 🍛
+//                       </button>
+//                     </div>
+//                   </div>
+//                 ))
+//               ) : (
+//                 <p className="text-center text-gray-500 col-span-full py-10">برای این روز منویی ثبت نشده است</p>
+//               )}
+//             </motion.div>
+//           </AnimatePresence>
+//         </section>
+//       </main>
+//     </div>
+//   );
+// }
+
+
+
+
+
+
+
+// import React, { useState, useEffect } from "react";
+// import moment from "moment-jalaali";
+// import { motion, AnimatePresence } from "framer-motion";
+// import "@fontsource/vazir";
+
+// import api from "../api";
+// import Navbar from "../components/Navbar";
+// import Toast from "../components/Toast";
+
+// moment.loadPersian({ dialect: "persian-modern" });
+
+// export default function MenuPage() {
+//   const today = moment();
+
+//   const [currentMonth, setCurrentMonth] = useState(moment());
+//   const [selectedDate, setSelectedDate] = useState(
+//     today.format("jYYYY-jMM-jDD")
+//   );
+
+//   const [menus, setMenus] = useState([]);
+//   const [foodsForDay, setFoodsForDay] = useState([]);
+//   const [menuId, setMenuId] = useState(null);
+
+//   const [selectedDays, setSelectedDays] = useState([]);
+//   const [monthStatus, setMonthStatus] = useState({});
+//   const [foodRatings, setFoodRatings] = useState({});
+//   const [selectionsMap, setSelectionsMap] = useState({});
+
+//   const [showToast, setShowToast] = useState(false);
+//   const [toastMessage, setToastMessage] = useState("");
+//   const [toastType, setToastType] = useState("success");
+
+//   const showNotification = (message, type = "success") => {
+//     setToastMessage(message);
+//     setToastType(type);
+//     setShowToast(true);
+//     setTimeout(() => setShowToast(false), 2500);
+//   };
+
+//   useEffect(() => {
+//     api
+//       .get("menu/")
+//       .then((res) => setMenus(res.data))
+//       .catch(() => showNotification("❌ خطا در دریافت منو", "error"));
+//   }, []);
+
+//   useEffect(() => {
+//     api
+//       .get("food-ratings/")
+//       .then((res) => {
+//         const ratingMap = {};
+//         res.data.forEach((item) => {
+//           ratingMap[item.food__id] = {
+//             avg: item.avg_rating,
+//             count: item.total_votes,
+//           };
+//         });
+//         setFoodRatings(ratingMap);
+//       })
+//       .catch(() => {});
+//   }, []);
+
+//  useEffect(() => {
+//     api.get("user-selections/").then((res) => {
+//       const mapping = {};
+//       if (res.data && Array.isArray(res.data)) {
+//         res.data.forEach((sel) => {
+//           if (sel?.menu?.date && sel?.food?.id) {
+//             const dateKey = moment(sel.menu.date, "YYYY-MM-DD").format("jYYYY-jMM-jDD");
+//             mapping[dateKey] = sel.food.id; 
+//           }
+//         });
+//       }
+//       setSelectionsMap(mapping);
+//       setSelectedDays(Object.keys(mapping));
+//     });
+//   }, []);
+//   useEffect(() => {
+//     const year = currentMonth.jYear();
+//     const month = currentMonth.jMonth() + 1;
+
+//     api
+//       .get(`menu/month-status/?year=${year}&month=${month}`)
+//       .then((res) => setMonthStatus(res.data.days || {}))
+//       .catch(() => setMonthStatus({}));
+//   }, [currentMonth]);
+
+//   useEffect(() => {
+//     if (!monthStatus || !selectedDate) return;
+
+//     const currentInfo = monthStatus[selectedDate];
+//     if (!currentInfo || currentInfo.enabled !== false) return;
+
+//     const daysInMonth = moment.jDaysInMonth(
+//       currentMonth.jYear(),
+//       currentMonth.jMonth()
+//     );
+
+//     for (
+//       let i = moment(selectedDate, "jYYYY-jMM-jDD").jDate() + 1;
+//       i <= daysInMonth;
+//       i++
+//     ) {
+//       const nextDay = currentMonth
+//         .clone()
+//         .startOf("jMonth")
+//         .add(i - 1, "day")
+//         .format("jYYYY-jMM-jDD");
+
+//       if (monthStatus[nextDay]?.enabled === true) {
+//         setSelectedDate(nextDay);
+//         break;
+//       }
+//     }
+//   }, [selectedDate, monthStatus, currentMonth]);
+
+//   useEffect(() => {
+//     const converted = menus.map((m) => ({
+//       ...m,
+//       jDate: moment(m.date, "YYYY-MM-DD").format("jYYYY-jMM-jDD"),
+//     }));
+
+//     const menu = converted.find((m) => m.jDate === selectedDate);
+//     setFoodsForDay(menu ? menu.foods : []);
+//     setMenuId(menu ? menu.id : null);
+//   }, [selectedDate, menus]);
+
+//   const saveSelection = async (mId, foodId, foodName) => {
+//     try {
+//       const res = await api.post("menu/select/", { menu: mId, food: foodId });
+//       if (res.status === 200 || res.status === 201) {
+//         // تغییر آنی وضعیت در فرانت (تیک سبز و هاله نوری)
+//         setSelectionsMap(prev => ({ ...prev, [selectedDate]: foodId }));
+//         if (!selectedDays.includes(selectedDate)) setSelectedDays(prev => [...prev, selectedDate]);
+        
+       
+//         // مکث کوتاه ۸۰۰ میلی‌ثانیه‌ای برای دیدن تیک سبز، سپس رفتن به روز بعد
+//         setTimeout(() => {
+//           const nextDay = moment(selectedDate, "jYYYY-jMM-jDD").add(1, "day");
+//           if (nextDay.jMonth() !== currentMonth.jMonth()) setCurrentMonth(nextDay);
+//           setSelectedDate(nextDay.format("jYYYY-jMM-jDD"));
+//         }, 800);
+//       }
+//     } catch {
+//       showNotification("❌ خطا در ثبت انتخاب", "error");
+//     }
+//   };
+
+//   const daysInMonth = moment.jDaysInMonth(
+//     currentMonth.jYear(),
+//     currentMonth.jMonth()
+//   );
+
+//   let firstDay = currentMonth.clone().startOf("jMonth").day();
+//   firstDay = (firstDay + 1) % 7;
+
+//   const blanks = Array(firstDay).fill(null);
+//   const days = Array.from({ length: daysInMonth }, (_, i) =>
+//     currentMonth.clone().startOf("jMonth").add(i, "days")
+//   );
+
+//   return (
+//     <div dir="rtl" className="min-h-screen bg-[#f8f5f2] font-[Vazir]">
+//       <Navbar active="menu" />
+//       <Toast show={showToast} message={toastMessage} type={toastType} />
+
+//       <main className="pt-24 max-w-6xl mx-auto px-4">
+//         <section className="grid grid-cols-1 md:grid-cols-2 gap-8">
+//           {/* تقویم */}
+//           <motion.div className="bg-white rounded-xl shadow-sm p-4 border border-gray-50" >
+//             <div className="flex justify-between mb-4">
+//               <button onClick={() => setCurrentMonth(currentMonth.clone().subtract(1, "jMonth"))}>❮</button>
+//               <h3 className="font-semibold">{currentMonth.format("jMMMM jYYYY")}</h3>
+//               <button onClick={() => setCurrentMonth(currentMonth.clone().add(1, "jMonth"))}>❯</button>
+//             </div>
+//             <div className="grid grid-cols-7 text-center text-xs mb-2">
+//               {["ش", "ی", "د", "س", "چ", "پ", "ج"].map((d) => (<div key={d}>{d}</div>))}
+//             </div>
+//             <div className="grid grid-cols-7 gap-1 text-center text-sm">
+//               {blanks.map((_, i) => (<div key={i} />))}
+//               {days.map((day) => {
+//                 const dateStr = day.format("jYYYY-jMM-jDD");
+//                 const dayNumber = day.jDate();
+//                 const info = monthStatus[dateStr];
+//                 const isDisabled = info && info.enabled === false;
+//                 const isSelected = dateStr === selectedDate;
+//                 const isChosen = selectedDays.includes(dateStr);
+//                 return (
+//                   <button
+//                     key={dateStr}
+//                     disabled={isDisabled}
+//                     onClick={() => isDisabled ? showNotification(info?.reason || "⛔ غیرفعال", "error") : setSelectedDate(dateStr)}
+//                     className={`relative py-2 rounded-full font-medium ${
+//                         isDisabled ? info?.reason === "تعطیل" ? "bg-red-100 text-red-600" : "bg-gray-200 text-gray-500"
+//                         : isSelected ? "bg-[#c97b39] text-white"
+//                         : isChosen ? "bg-green-100 text-green-700" : "hover:bg-[#f0e6dd]"
+//                     }`}
+//                   >
+//                     {dayNumber}
+//                   </button>
+//                 );
+//               })}
+//             </div>
+//           </motion.div>
+
+//           {/* راهنمای وضعیت */}
+//          <div className="bg-white rrounded-xl shadow-sm p-4 border border-gray-50 flex flex-col justify-center">
+//     <div>
+//       <h3 className="text-lg font-bold mb-6 text-[#503a2f] border-b border-[#f0e6dd] pb-3 flex items-center gap-2">
+//         راهنمای تقویم و وضعیت‌ها 🗓️
+//       </h3>
+//       <ul className="grid grid-cols-2 gap-2">
+//         <li className="flex items-center gap-3">
+//           <span className="w-3.5 h-3.5 rounded-full bg-[#22c55e] shadow-sm" />
+//           <span className="text-[#6F6259]">روزهای دارای رزرو قطعی ناهار</span>
+//         </li>
+//         <li className="flex items-center gap-3">
+//           <span className="w-3.5 h-3.5 rounded-full bg-[#c97b39] shadow-sm" />
+//           <span className="text-[#6F6259]">روز انتخاب شده (مشاهده منو)</span>
+//         </li>
+//         <li className="flex items-center gap-3">
+//           <span className="w-3.5 h-3.5 rounded-full bg-[#94a3b8] shadow-sm" />
+//           <span className="text-[#6F6259]">روزهای فاقد منو یا غیرقابل انتخاب</span>
+//         </li>
+//         <li className="flex items-center gap-3">
+//           <span className="w-3.5 h-3.5 rounded-full bg-[#ef4444] shadow-sm" />
+//           <span className="text-[#6F6259]">روزهای تعطیل یا غیرفعال شده</span>
+//         </li>
+//       </ul>
+//     </div>
+
+//     {/* باکس خلاصه فعالیت (پر کردن فضای خالی پایین کارت) */}
+//     <div className="mt-8 pt-6 border-t border-dashed border-[#e0d7cc]">
+//       <div className="bg-[#fdf8f4] p-5 rounded-xl border border-[#f5e6d8]">
+//         <p className="text-xs text-[#8b735a] leading-7">
+//           <strong className="block mb-2 text-[#c97b39] text-sm">خلاصه فعالیت شما:</strong>
+//           شما در ماه <span className="font-bold text-[#503a2f]">{currentMonth.format("jMMMM")}</span>، تا این لحظه برای <span className="font-bold text-[#d46211]">{selectedDays.filter(d => d.startsWith(currentMonth.format("jYYYY-jMM"))).length} روز</span> رزرو ناهار ثبت کرده‌اید.
+//         </p>
+//       </div>
+//       <p className="text-[10px] text-gray-400 mt-4 text-center italic">
+//         شرکت ریل‌پرداز نوآفرین - واحد رفاهی و تدارکات
+//       </p>
+//     </div>
+//   </div>
+//         </section>
+
+//         {/* لیست غذاها - کارت‌های کوچک‌تر */}
+//         <section className="mt-2 mb-12">
+//           <AnimatePresence mode="wait">
+//             <motion.div
+//               key={selectedDate}
+//               initial={{ opacity: 0, y: 20 }}
+//               animate={{ opacity: 1, y: 0 }}
+//               exit={{ opacity: 0, y: -10 }}
+//               className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+//             >
+//               {foodsForDay.length ? (
+//                 foodsForDay.map((food) => {
+//                   const isThisSelected = selectionsMap[selectedDate] === food.id;
+
+//                   return (
+//                     <div 
+//                       key={food.id} 
+//                       className={`group relative rounded-[2.5rem] p-3 transition-all duration-500 flex flex-col overflow-hidden border-2
+//                         ${isThisSelected 
+//                           ? 'border-green-500 shadow-[0_0_30px_rgba(34,197,94,0.3)] bg-green-50/20 scale-[1.02]' 
+//                           : 'border-white bg-white shadow-sm hover:shadow-xl'}`}
+//                     >
+//                       {/* تصویر با اورلی تایید */}
+//                       <div className="relative h-28 overflow-hidden rounded-[2rem]">
+//                         <img 
+//                           src={food.photo || "https://via.placeholder.com/400x300"} 
+//                           className={`w-full h-full object-cover transition-transform duration-700 ${isThisSelected ? 'blur-[1.5px] scale-105' : 'group-hover:scale-110'}`} 
+//                           alt={food.name} 
+//                         />
+//                         {isThisSelected && (
+//                           <div className="absolute inset-0 bg-green-600/30 flex items-center justify-center backdrop-blur-[1px]">
+//                             <motion.span initial={{ scale: 0 }} animate={{ scale: 1.2 }} className="material-symbols-outlined !text-7xl text-white drop-shadow-lg">check_circle</motion.span>
+//                           </div>
+//                         )}
+//                         {/* امتیاز شناور شیشه‌ای */}
+//                         {!isThisSelected && foodRatings[food.id] && (
+//                           <div className="absolute bottom-3 left-3 bg-white/20 backdrop-blur-md px-2 py-1 rounded-full flex items-center gap-1 text-white border border-white/30 text-[10px] font-bold">
+//                             <span className="material-symbols-outlined !text-xs" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
+//                             {foodRatings[food.id].avg?.toFixed(1)}
+//                           </div>
+//                         )}
+//                       </div>
+
+//                       {/* محتوا و دکمه انتخاب (بدون قفل برای تغییر نظر) */}
+//                       <div className="p-5 flex flex-col items-center text-center flex-grow">
+//                         <h4 className={`text-lg font-black mb-1 transition-colors ${isThisSelected ? 'text-green-700' : 'text-[#503a2f]'}`}>{food.name}</h4>
+//                         <p className="text-[10px] text-gray-400 mb-5 line-clamp-1 italic">{food.description || "تجربه‌ای لذیذ از ناهار شرکت نُوآفرین"}</p>
+                        
+//                         <button
+//                           onClick={() => saveSelection(menuId, food.id, food.name)}
+//                           className={`w-full py-3.5 rounded-full font-black text-sm transition-all duration-300 flex items-center justify-center gap-2
+//                             ${isThisSelected 
+//                               ? 'bg-green-500 text-white shadow-none cursor-default' 
+//                               : 'bg-gradient-to-r from-[#c97b39] to-[#d48c52] text-white shadow-md hover:shadow-orange-200 active:scale-95'}`}
+//                         >
+//                           {isThisSelected ? (
+//                             <>رزرو نهایی شد <span className="material-symbols-outlined !text-base">task_alt</span></>
+//                           ) : (
+//                             'تایید و رزرو نهایی ناهار 🍛'
+//                           )}
+//                         </button>
+//                       </div>
+//                     </div>
+//                   );
+//                 })
+//               ) : (
+//                 <div className="col-span-full py-16 text-center bg-white/50 rounded-[3rem] border-2 border-dashed border-gray-200">
+//                    <p className="text-gray-400 font-black text-sm text-center w-full">هنوز منویی برای این تاریخ ثبت نشده است 🍽️</p>
+//                 </div>
+//               )}
+//             </motion.div>
+//           </AnimatePresence>
+//         </section>
+//       </main>
+//     </div>
+//   );
+// }

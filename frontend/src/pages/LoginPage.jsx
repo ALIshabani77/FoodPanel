@@ -1,296 +1,15 @@
-// import React, { useState, useEffect } from "react";
-// import { motion, AnimatePresence } from "framer-motion";
-// import { useNavigate } from "react-router-dom";
-// import api from "../api"; // استفاده از api.js
-// import Toast from "../components/Toast";
-// import "@fontsource/vazirmatn";
-
-// export default function LoginPage() {
-//   const navigate = useNavigate();
-  
-//   // view: 'login' | 'register' | 'reset'
-//   const [view, setView] = useState("login");
-//   const [loading, setLoading] = useState(false);
-
-//   // فرم دیتا
-//   const [formData, setFormData] = useState({
-//     username: "",
-//     password: "",
-//     confirmPassword: "",
-//     firstName: "",
-//     lastName: "",
-//     newPassword: ""
-//   });
-
-//   const [showToast, setShowToast] = useState(false);
-//   const [toastMessage, setToastMessage] = useState("");
-//   const [toastType, setToastType] = useState("error");
-
-//   // بررسی لاگین بودن
-//   useEffect(() => {
-//     const token = localStorage.getItem("access");
-//     if (token) navigate("/menu", { replace: true });
-//   }, [navigate]);
-
-//   const showNotification = (message, type = "error") => {
-//     setToastMessage(message);
-//     setToastType(type);
-//     setShowToast(true);
-//     setTimeout(() => setShowToast(false), 3000);
-//   };
-
-//   const handleChange = (e) => {
-//     setFormData({ ...formData, [e.target.name]: e.target.value });
-//   };
-
-//   // --- 1. لاگین (ورود) ---
-//   const handleLogin = async (e) => {
-//     e.preventDefault();
-//     setLoading(true);
-//     try {
-//       // ✅ اصلاح شده: حذف auth/ اضافه
-//       const res = await api.post("login/", {
-//         username: formData.username,
-//         password: formData.password
-//       });
-      
-//       localStorage.setItem("access", res.data.access);
-//       localStorage.setItem("refresh", res.data.refresh);
-//       localStorage.setItem("user", JSON.stringify(res.data.user));
-
-//       showNotification("خوش آمدید!", "success");
-//       setTimeout(() => navigate("/menu"), 1000);
-//     } catch (err) {
-//       console.error(err);
-//       showNotification(err.response?.data?.error || "نام کاربری یا رمز عبور اشتباه است");
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-
-//   // --- 2. ثبت نام (Register) ---
-//   const handleRegister = async (e) => {
-//     e.preventDefault();
-    
-//     if (!formData.username || !formData.password) {
-//         showNotification("لطفاً نام کاربری و رمز عبور را وارد کنید");
-//         return;
-//     }
-//     if (formData.password !== formData.confirmPassword) {
-//       showNotification("رمز عبور و تکرار آن مطابقت ندارند");
-//       return;
-//     }
-
-//     setLoading(true);
-//     try {
-//       // ✅ اصلاح شده: حذف auth/ اضافه
-//       const payload = {
-//           username: formData.username,
-//           password: formData.password,
-//           first_name: formData.firstName,
-//           last_name: formData.lastName
-//       };
-
-//       const res = await api.post("register/", payload);
-
-//       // لاگین خودکار بعد از ثبت نام
-//       localStorage.setItem("access", res.data.access);
-//       localStorage.setItem("refresh", res.data.refresh);
-//       localStorage.setItem("user", JSON.stringify(res.data.user));
-
-//       showNotification("ثبت نام با موفقیت انجام شد!", "success");
-//       setTimeout(() => navigate("/menu"), 1000);
-//     } catch (err) {
-//       console.error(err);
-//       const errorMsg = err.response?.data?.error || "خطا در ثبت نام (نام کاربری تکراری است؟)";
-//       showNotification(errorMsg);
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-
-//   // --- 3. فراموشی رمز (Reset) ---
-//   const handleReset = async (e) => {
-//     e.preventDefault();
-//     setLoading(true);
-//     try {
-//       // ✅ اصلاح شده: حذف auth/ اضافه
-//       await api.post("reset-password/", {
-//         username: formData.username,
-//         new_password: formData.newPassword
-//       });
-//       showNotification("رمز عبور تغییر کرد. لطفاً وارد شوید.", "success");
-//       setView("login");
-//     } catch (err) {
-//       showNotification(err.response?.data?.error || "کاربری با این نام پیدا نشد");
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-
-//   return (
-//     <div dir="rtl" className="min-h-screen flex flex-col items-center justify-center bg-[#f8f5f2] font-[Vazirmatn] px-4">
-//       <Toast show={showToast} message={toastMessage} type={toastType} />
-
-//       <motion.div 
-//         layout
-//         className="bg-white shadow-xl rounded-3xl p-8 w-full max-w-md text-center border border-[#e0d7cc]"
-//       >
-//         <div className="mb-6 flex justify-center text-[#c97b39]">
-//           <span className="material-symbols-outlined text-6xl">restaurant_menu</span>
-//         </div>
-        
-//         <AnimatePresence mode="wait">
-          
-//           {/* --- حالت ورود --- */}
-//           {view === "login" && (
-//             <motion.div
-//               key="login"
-//               initial={{ opacity: 0, x: 20 }}
-//               animate={{ opacity: 1, x: 0 }}
-//               exit={{ opacity: 0, x: -20 }}
-//             >
-//               <h1 className="text-2xl font-bold text-[#503a2f] mb-6">ورود به حساب</h1>
-//               <form onSubmit={handleLogin} className="space-y-4">
-//                 <input
-//                   name="username"
-//                   placeholder="نام کاربری"
-//                   onChange={handleChange}
-//                   className="input-field"
-//                   required
-//                 />
-//                 <input
-//                   name="password"
-//                   type="password"
-//                   placeholder="رمز عبور"
-//                   onChange={handleChange}
-//                   className="input-field"
-//                   required
-//                 />
-//                 <div className="text-left">
-//                   <button type="button" onClick={() => setView("reset")} className="text-sm text-[#c97b39] hover:underline">
-//                     رمز عبور را فراموش کردید؟
-//                   </button>
-//                 </div>
-//                 <button type="submit" disabled={loading} className="btn-primary w-full">
-//                   {loading ? "..." : "ورود"}
-//                 </button>
-//               </form>
-//               <div className="mt-6 text-sm text-gray-600">
-//                 حساب کاربری ندارید؟{" "}
-//                 <button onClick={() => setView("register")} className="text-[#c97b39] font-bold hover:underline">
-//                   ثبت نام کنید
-//                 </button>
-//               </div>
-//             </motion.div>
-//           )}
-
-//           {/* --- حالت ثبت نام --- */}
-//           {view === "register" && (
-//             <motion.div
-//               key="register"
-//               initial={{ opacity: 0, x: 20 }}
-//               animate={{ opacity: 1, x: 0 }}
-//               exit={{ opacity: 0, x: -20 }}
-//             >
-//               <h1 className="text-2xl font-bold text-[#503a2f] mb-6">ایجاد حساب جدید</h1>
-//               <form onSubmit={handleRegister} className="space-y-4">
-//                 <div className="flex gap-2">
-//                   <input name="firstName" placeholder="نام" onChange={handleChange} className="input-field w-1/2" required />
-//                   <input name="lastName" placeholder="نام خانوادگی" onChange={handleChange} className="input-field w-1/2" required />
-//                 </div>
-//                 <input name="username" placeholder="نام کاربری (انگلیسی)" onChange={handleChange} className="input-field" required />
-//                 <input name="password" type="password" placeholder="رمز عبور" onChange={handleChange} className="input-field" required />
-//                 <input name="confirmPassword" type="password" placeholder="تکرار رمز عبور" onChange={handleChange} className="input-field" required />
-                
-//                 <button type="submit" disabled={loading} className="btn-primary w-full">
-//                   {loading ? "..." : "ثبت نام"}
-//                 </button>
-//               </form>
-//               <div className="mt-6 text-sm text-gray-600">
-//                 قبلاً ثبت نام کرده‌اید؟{" "}
-//                 <button onClick={() => setView("login")} className="text-[#c97b39] font-bold hover:underline">
-//                   وارد شوید
-//                 </button>
-//               </div>
-//             </motion.div>
-//           )}
-
-//           {/* --- حالت فراموشی رمز --- */}
-//           {view === "reset" && (
-//             <motion.div
-//               key="reset"
-//               initial={{ opacity: 0, x: 20 }}
-//               animate={{ opacity: 1, x: 0 }}
-//               exit={{ opacity: 0, x: -20 }}
-//             >
-//               <h1 className="text-2xl font-bold text-[#503a2f] mb-2">بازیابی رمز عبور</h1>
-//               <p className="text-sm text-gray-500 mb-6">نام کاربری خود را وارد کنید.</p>
-//               <form onSubmit={handleReset} className="space-y-4">
-//                 <input name="username" placeholder="نام کاربری" onChange={handleChange} className="input-field" required />
-//                 <input name="newPassword" type="password" placeholder="رمز عبور جدید" onChange={handleChange} className="input-field" required />
-                
-//                 <button type="submit" disabled={loading} className="btn-primary w-full">
-//                   {loading ? "..." : "تغییر رمز"}
-//                 </button>
-//               </form>
-//               <div className="mt-6">
-//                 <button onClick={() => setView("login")} className="text-gray-500 text-sm hover:text-[#503a2f]">
-//                   بازگشت به ورود
-//                 </button>
-//               </div>
-//             </motion.div>
-//           )}
-
-//         </AnimatePresence>
-//       </motion.div>
-
-//       <style>{`
-//         .input-field {
-//           width: 100%;
-//           padding: 12px;
-//           border-radius: 12px;
-//           border: 1px solid #e0d7cc;
-//           background-color: #fdfbf9;
-//           outline: none;
-//           transition: all 0.2s;
-//         }
-//         .input-field:focus {
-//           border-color: #c97b39;
-//           box-shadow: 0 0 0 3px rgba(201, 123, 57, 0.1);
-//         }
-//         .btn-primary {
-//           background-color: #c97b39;
-//           color: white;
-//           padding: 12px;
-//           border-radius: 12px;
-//           font-weight: bold;
-//           transition: background-color 0.2s;
-//         }
-//         .btn-primary:hover {
-//           background-color: #b76c2d;
-//         }
-//         .btn-primary:disabled {
-//           background-color: #d1d5db;
-//           cursor: not-allowed;
-//         }
-//       `}</style>
-//     </div>
-//   );
-// }
-
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import api from "../api"; // استفاده از api.js بهینه‌شده
+import api from "../api";
 import Toast from "../components/Toast";
 import "@fontsource/vazirmatn";
 
 export default function LoginPage() {
   const navigate = useNavigate();
-
-  const [view, setView] = useState("login"); // 'login' | 'register' | 'reset'
+  const [view, setView] = useState("login");
   const [loading, setLoading] = useState(false);
+  const [organizations, setOrganizations] = useState([]);
 
   const [formData, setFormData] = useState({
     username: "",
@@ -298,17 +17,21 @@ export default function LoginPage() {
     confirmPassword: "",
     firstName: "",
     lastName: "",
-    newPassword: ""
+    newPassword: "",
+    organization: ""
   });
 
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
   const [toastType, setToastType] = useState("error");
 
-  // بررسی لاگین بودن
   useEffect(() => {
     const token = localStorage.getItem("access");
     if (token) navigate("/menu", { replace: true });
+    
+    api.get("organizations/")
+      .then(res => setOrganizations(res.data))
+      .catch(err => console.error("Error fetching orgs"));
   }, [navigate]);
 
   const showNotification = (message, type = "error") => {
@@ -322,7 +45,6 @@ export default function LoginPage() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // --- ورود ---
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -331,30 +53,26 @@ export default function LoginPage() {
         username: formData.username,
         password: formData.password
       });
-
       localStorage.setItem("access", res.data.access);
       localStorage.setItem("refresh", res.data.refresh);
       localStorage.setItem("user", JSON.stringify(res.data.user));
-
       showNotification("خوش آمدید!", "success");
-      setTimeout(() => navigate("/menu"), 1000);
+      setTimeout(() => navigate("/menu"), 800);
     } catch (err) {
-      console.error(err);
-      showNotification(err.response?.data?.error || "نام کاربری یا رمز عبور اشتباه است");
+      showNotification(err.response?.data?.error || "اطلاعات ورود صحیح نیست");
     } finally {
       setLoading(false);
     }
   };
 
-  // --- ثبت نام ---
   const handleRegister = async (e) => {
     e.preventDefault();
-    if (!formData.username || !formData.password) {
-      showNotification("لطفاً نام کاربری و رمز عبور را وارد کنید");
+    if (!formData.username || !formData.password || !formData.organization) {
+      showNotification("تکمیل تمامی موارد الزامی است");
       return;
     }
     if (formData.password !== formData.confirmPassword) {
-      showNotification("رمز عبور و تکرار آن مطابقت ندارند");
+      showNotification("رمز عبور با تکرار آن یکی نیست");
       return;
     }
 
@@ -364,111 +82,91 @@ export default function LoginPage() {
         username: formData.username,
         password: formData.password,
         first_name: formData.firstName,
-        last_name: formData.lastName
+        last_name: formData.lastName,
+        organization: formData.organization
       };
-
-      const res = await api.post("register/", payload);
-
-      // لاگین خودکار بعد از ثبت نام
-      localStorage.setItem("access", res.data.access);
-      localStorage.setItem("refresh", res.data.refresh);
-      localStorage.setItem("user", JSON.stringify(res.data.user));
-
-      showNotification("ثبت نام با موفقیت انجام شد!", "success");
-      setTimeout(() => navigate("/menu"), 1000);
-    } catch (err) {
-      console.error(err);
-      const errorMsg = err.response?.data?.error || "خطا در ثبت نام (نام کاربری تکراری است؟)";
-      showNotification(errorMsg);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // --- فراموشی رمز ---
-  const handleReset = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      await api.post("reset-password/", {
-        username: formData.username,
-        new_password: formData.newPassword
-      });
-      showNotification("رمز عبور تغییر کرد. لطفاً وارد شوید.", "success");
+      await api.post("register/", payload);
+      showNotification("ثبت نام با موفقیت انجام شد", "success");
       setView("login");
     } catch (err) {
-      showNotification(err.response?.data?.error || "کاربری با این نام پیدا نشد");
+      showNotification("نام کاربری تکراری است یا خطایی رخ داده");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div dir="rtl" className="min-h-screen flex flex-col items-center justify-center bg-[#f8f5f2] font-[Vazirmatn] px-4">
+    <div dir="rtl" className="min-h-screen flex items-center justify-center bg-[#fcfaf8] font-[Vazirmatn] px-4 relative">
+      {/* دایره‌های لوکس پس‌زمینه */}
+      <div className="absolute top-20 left-20 w-64 h-64 bg-orange-100 rounded-full blur-3xl opacity-60"></div>
+      <div className="absolute bottom-20 right-20 w-80 h-80 bg-orange-50 rounded-full blur-3xl opacity-80"></div>
+
       <Toast show={showToast} message={toastMessage} type={toastType} />
 
-      <motion.div layout className="bg-white shadow-xl rounded-3xl p-8 w-full max-w-md text-center border border-[#e0d7cc]">
-        <div className="mb-6 flex justify-center text-[#c97b39]">
-          <span className="material-symbols-outlined text-6xl">restaurant_menu</span>
-        </div>
+      <motion.div 
+        layout
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className={`bg-white/70 backdrop-blur-2xl shadow-[0_40px_100px_-20px_rgba(0,0,0,0.08)] rounded-[3rem] p-8 sm:p-12 w-full border border-white relative z-10 transition-all duration-500 ${view === "register" ? "max-w-2xl" : "max-w-md"}`}
+      >
+        <header className="mb-8 text-center">
+          <div className="w-16 h-16 bg-gradient-to-br from-[#e67e22] to-[#f39c12] rounded-2xl flex items-center justify-center mx-auto shadow-lg mb-4">
+            <span className="material-symbols-outlined text-white text-3xl">corporate_fare</span>
+          </div>
+          <h1 className="text-3xl font-black text-[#1e293b]">ریل‌پرداز نُوآفرین</h1>
+          <p className="text-gray-400 text-xs font-bold mt-2 uppercase tracking-widest">Employee Portal</p>
+        </header>
 
         <AnimatePresence mode="wait">
           {view === "login" && (
-            <motion.div
-              key="login"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-            >
-              <h1 className="text-2xl font-bold text-[#503a2f] mb-6">ورود به حساب</h1>
+            <motion.div key="login" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
               <form onSubmit={handleLogin} className="space-y-4">
-                <input name="username" placeholder="نام کاربری" onChange={handleChange} className="input-field" required />
-                <input name="password" type="password" placeholder="رمز عبور" onChange={handleChange} className="input-field" required />
-                <div className="text-left">
-                  <button type="button" onClick={() => setView("reset")} className="text-sm text-[#c97b39] hover:underline">
-                    رمز عبور را فراموش کردید؟
-                  </button>
-                </div>
-                <button type="submit" disabled={loading} className="btn-primary w-full">{loading ? "..." : "ورود"}</button>
+                <input name="username" placeholder="نام کاربری" onChange={handleChange} className="luxury-input" required />
+                <input name="password" type="password" placeholder="رمز عبور" onChange={handleChange} className="luxury-input" required />
+                <button type="submit" disabled={loading} className="luxury-btn w-full mt-2">
+                  {loading ? "در حال ورود..." : "ورود به حساب"}
+                </button>
               </form>
-              <div className="mt-6 text-sm text-gray-600">
-                حساب کاربری ندارید؟{" "}
-                <button onClick={() => setView("register")} className="text-[#c97b39] font-bold hover:underline">ثبت نام کنید</button>
+              <div className="mt-8 text-sm font-bold text-gray-500">
+                عضو نیستید؟ <button onClick={() => setView("register")} className="text-[#e67e22] hover:underline">ثبت نام کنید</button>
               </div>
             </motion.div>
           )}
 
           {view === "register" && (
-            <motion.div key="register" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-              <h1 className="text-2xl font-bold text-[#503a2f] mb-6">ایجاد حساب جدید</h1>
+            <motion.div key="register" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
               <form onSubmit={handleRegister} className="space-y-4">
-                <div className="flex gap-2">
-                  <input name="firstName" placeholder="نام" onChange={handleChange} className="input-field w-1/2" required />
-                  <input name="lastName" placeholder="نام خانوادگی" onChange={handleChange} className="input-field w-1/2" required />
-                </div>
-                <input name="username" placeholder="نام کاربری (انگلیسی)" onChange={handleChange} className="input-field" required />
-                <input name="password" type="password" placeholder="رمز عبور" onChange={handleChange} className="input-field" required />
-                <input name="confirmPassword" type="password" placeholder="تکرار رمز عبور" onChange={handleChange} className="input-field" required />
-                <button type="submit" disabled={loading} className="btn-primary w-full">{loading ? "..." : "ثبت نام"}</button>
-              </form>
-              <div className="mt-6 text-sm text-gray-600">
-                قبلاً ثبت نام کرده‌اید؟{" "}
-                <button onClick={() => setView("login")} className="text-[#c97b39] font-bold hover:underline">وارد شوید</button>
-              </div>
-            </motion.div>
-          )}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <input name="firstName" placeholder="نام" onChange={handleChange} className="luxury-input" required />
+                  <input name="lastName" placeholder="نام خانوادگی" onChange={handleChange} className="luxury-input" required />
+                  
+                  <div className="sm:col-span-2">
+                    <select 
+                      name="organization" 
+                      value={formData.organization} 
+                      onChange={handleChange} 
+                      className="luxury-input appearance-none bg-no-repeat bg-[left_1rem_center] bg-[length:16px]"
+                      style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")` }}
+                      required
+                    >
+                      <option value="">انتخاب شعبه (بخارست / راه‌آهن ...)</option>
+                      {organizations.map(org => <option key={org.id} value={org.id}>{org.name}</option>)}
+                    </select>
+                  </div>
 
-          {view === "reset" && (
-            <motion.div key="reset" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-              <h1 className="text-2xl font-bold text-[#503a2f] mb-2">بازیابی رمز عبور</h1>
-              <p className="text-sm text-gray-500 mb-6">نام کاربری خود را وارد کنید.</p>
-              <form onSubmit={handleReset} className="space-y-4">
-                <input name="username" placeholder="نام کاربری" onChange={handleChange} className="input-field" required />
-                <input name="newPassword" type="password" placeholder="رمز عبور جدید" onChange={handleChange} className="input-field" required />
-                <button type="submit" disabled={loading} className="btn-primary w-full">{loading ? "..." : "تغییر رمز"}</button>
+                  <input name="username" placeholder="نام کاربری (انگلیسی)" onChange={handleChange} className="luxury-input" required />
+                  <input name="password" type="password" placeholder="رمز عبور" onChange={handleChange} className="luxury-input" required />
+                  <div className="sm:col-span-2">
+                    <input name="confirmPassword" type="password" placeholder="تکرار رمز عبور" onChange={handleChange} className="luxury-input" required />
+                  </div>
+                </div>
+                
+                <button type="submit" disabled={loading} className="luxury-btn w-full mt-2">
+                  {loading ? "در حال ثبت..." : "تایید و ایجاد حساب"}
+                </button>
               </form>
-              <div className="mt-6">
-                <button onClick={() => setView("login")} className="text-gray-500 text-sm hover:text-[#503a2f]">بازگشت به ورود</button>
+              <div className="mt-6 text-sm font-bold text-gray-500">
+                قبلاً ثبت‌نام کرده‌اید؟ <button onClick={() => setView("login")} className="text-[#e67e22] hover:underline">وارد شوید</button>
               </div>
             </motion.div>
           )}
@@ -476,34 +174,40 @@ export default function LoginPage() {
       </motion.div>
 
       <style>{`
-        .input-field {
+        .luxury-input {
           width: 100%;
-          padding: 12px;
-          border-radius: 12px;
-          border: 1px solid #e0d7cc;
-          background-color: #fdfbf9;
+          padding: 14px 20px;
+          border-radius: 1.25rem;
+          border: 2px solid #f1f5f9;
+          background-color: #f8fafc;
+          font-weight: 800;
+          font-size: 0.85rem;
+          color: #1e293b;
           outline: none;
-          transition: all 0.2s;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          text-align: right;
         }
-        .input-field:focus {
-          border-color: #c97b39;
-          box-shadow: 0 0 0 3px rgba(201, 123, 57, 0.1);
+        .luxury-input:focus {
+          border-color: #e67e22;
+          background-color: #ffffff;
+          box-shadow: 0 8px 20px -10px rgba(230, 126, 34, 0.2);
         }
-        .btn-primary {
-          background-color: #c97b39;
+        .luxury-btn {
+          background: linear-gradient(135deg, #e67e22 0%, #f39c12 100%);
           color: white;
-          padding: 12px;
-          border-radius: 12px;
-          font-weight: bold;
-          transition: background-color 0.2s;
+          padding: 16px;
+          border-radius: 1.25rem;
+          font-weight: 900;
+          font-size: 0.95rem;
+          transition: all 0.3s;
+          box-shadow: 0 10px 25px -5px rgba(230, 126, 34, 0.4);
         }
-        .btn-primary:hover {
-          background-color: #b76c2d;
+        .luxury-btn:hover {
+          transform: translateY(-2px);
+          filter: brightness(1.05);
+          box-shadow: 0 15px 30px -5px rgba(230, 126, 34, 0.5);
         }
-        .btn-primary:disabled {
-          background-color: #d1d5db;
-          cursor: not-allowed;
-        }
+        .luxury-btn:active { transform: translateY(0); }
       `}</style>
     </div>
   );
