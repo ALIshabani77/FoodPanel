@@ -1,0 +1,13 @@
+{
+  "django": {
+    "mirror": true,
+    "pythonVersion": "3.12",
+    "timezone": "Asia/Tehran"
+  },
+  "disks": [
+    {
+      "name": "media",
+      "mountTo": "/var/lib/liara/media"
+    }
+  ]
+}
